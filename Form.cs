@@ -12,11 +12,9 @@ namespace ChromiumUpdaterGUI
 {
     public partial class Form : System.Windows.Forms.Form
     {
-        //initilize variables
         static NotifyIcon notifyIcon = new() { Visible = true, Icon = System.Drawing.SystemIcons.Application };
         HttpClient client = new();
 
-        //initilize constants
         const string appTitle = "Chromium Updater";
         const string storedVariables = "ChromiumUpdater_StoredVariables.txt";
 
@@ -27,7 +25,7 @@ namespace ChromiumUpdaterGUI
 
         public Form() => InitializeComponent();
 
-        private async void Form1_Load(object sender, EventArgs e) 
+        private async void Form_Load(object sender, EventArgs e) 
         {
             Hide();
             await CheckForUpdate();
@@ -198,7 +196,7 @@ namespace ChromiumUpdaterGUI
             }
             catch (FileNotFoundException e) 
             { 
-                DisplayErrorMessage($"A valid install of Chromium could not be found at {Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Chromium\Application\chrome.exe")}\n" +
+                DisplayErrorMessage($"A valid install of Chromium could not be found at {Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Chromium\")}\n" +
                                     "Please make sure that Chromium is installed at thet locatiom.", e); 
             }
             catch (Exception e) 
