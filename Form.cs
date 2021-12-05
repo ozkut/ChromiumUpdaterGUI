@@ -13,15 +13,7 @@ namespace ChromiumUpdaterGUI
     public partial class Form : System.Windows.Forms.Form
     {
         static NotifyIcon notifyIcon = new() { Visible = true, Icon = System.Drawing.SystemIcons.Application };
-        HttpClient client = new();
-
-        const string appTitle = "Chromium Updater";
-        const string storedVariables = "ChromiumUpdater_StoredVariables.txt";
-
-        const int notificationTimeout = 3000;
-
-        const string StartOnBoot = "StartOnBoot=";
-        const string CheckUpdateOnClick = "CheckUpdateOnClick=";
+        static HttpClient client = new();
 
         public Form() => InitializeComponent();
 
@@ -29,16 +21,7 @@ namespace ChromiumUpdaterGUI
         {
             Hide();
             await CheckForUpdate();
-
-            if (File.Exists(storedVariables))
-            {
-                UpdateCheckboxesFromFile();
-                if (cb_Startup.Checked)
-                    CheckStartupStatus(cb_Startup.Checked);
-            }
-                
-            else
-                CreateStoredVariables();
+            CheckStoredVariables();
 
             notifyIcon.BalloonTipClicked += NotifyIconClicked;
             notifyIcon.Click += NotifyIconClicked;
@@ -60,23 +43,23 @@ namespace ChromiumUpdaterGUI
             const string True = "True";
             const string False = "False";
 
-            foreach (string line in File.ReadAllLines(storedVariables))
+            foreach (string line in File.ReadAllLines(Constants.storedVariables))
             {
                 switch (line)
                 {
-                    case StartOnBoot + True:
+                    case Constants.StartOnBoot + True:
                         cb_Startup.Checked = true;
                         break;
 
-                    case StartOnBoot + False:
+                    case Constants.StartOnBoot + False:
                         cb_Startup.Checked = false;
                         break;
 
-                    case CheckUpdateOnClick + True:
+                    case Constants.CheckUpdateOnClick + True:
                         cb_CheckUpateOnClick.Checked = true;
                         break;
 
-                    case CheckUpdateOnClick + False:
+                    case Constants.CheckUpdateOnClick + False:
                         cb_CheckUpateOnClick.Checked = false;
                         break;
                 }
@@ -86,42 +69,56 @@ namespace ChromiumUpdaterGUI
         }
 
         //storedVaribles stuff
+        private void CheckStoredVariables()
+        {
+            if (File.Exists(Constants.storedVariables))
+            {
+                UpdateCheckboxesFromFile();
+                if (cb_Startup.Checked)
+                    CheckStartupStatus(cb_Startup.Checked);
+            }
+
+            else
+                CreateStoredVariables();
+        }
+
         private void CreateStoredVariables()
         {
-            File.WriteAllText(storedVariables,
-                              StartOnBoot + cb_Startup.Checked.ToString() + "\n" +
-                              CheckUpdateOnClick + cb_CheckUpateOnClick.Checked.ToString() + "\n");
+            File.WriteAllText(Constants.storedVariables,
+                              Constants.StartOnBoot + cb_Startup.Checked.ToString() + '\n' +
+                              Constants.CheckUpdateOnClick + cb_CheckUpateOnClick.Checked.ToString() + '\n');
 
             UpdateFileAttributes(true);
         }
 
         private async void UpdateStoredVariables()
         {
-            if (File.Exists(storedVariables))
+            //some very VERY bad code
+            if (File.Exists(Constants.storedVariables))
             {
                 UpdateFileAttributes(false);
 
-                string[] temp_StoredVariables = File.ReadAllLines(storedVariables);
+                string[] temp_StoredVariables = File.ReadAllLines(Constants.storedVariables);
                 string[] final_StoredVariables = new string[temp_StoredVariables.Length];
 
                 for (int i = 0; i < temp_StoredVariables.Length; i++)
                 {
-                    if (temp_StoredVariables[i] == $"{StartOnBoot}True" || temp_StoredVariables[i] == $"{StartOnBoot}False")
-                        final_StoredVariables[i] = StartOnBoot + cb_Startup.Checked;
+                    if (temp_StoredVariables[i] == $"{Constants.StartOnBoot}True" || temp_StoredVariables[i] == $"{Constants.StartOnBoot}False")
+                        final_StoredVariables[i] = Constants.StartOnBoot + cb_Startup.Checked;
 
-                    else if (temp_StoredVariables[i] == $"{CheckUpdateOnClick}True" || temp_StoredVariables[i] == $"{CheckUpdateOnClick}False")
-                        final_StoredVariables[i] = CheckUpdateOnClick + cb_CheckUpateOnClick.Checked;
+                    else if (temp_StoredVariables[i] == $"{Constants.CheckUpdateOnClick}True" || temp_StoredVariables[i] == $"{Constants.CheckUpdateOnClick}False")
+                        final_StoredVariables[i] = Constants.CheckUpdateOnClick + cb_CheckUpateOnClick.Checked;
 
                     else
                     {
                         switch (i)
                         {
                             case 0:
-                                final_StoredVariables[i] = StartOnBoot + cb_Startup.Checked;
+                                final_StoredVariables[i] = Constants.StartOnBoot + cb_Startup.Checked;
                                 break;
 
                             case 1:
-                                final_StoredVariables[i] = CheckUpdateOnClick + cb_CheckUpateOnClick.Checked;
+                                final_StoredVariables[i] = Constants.CheckUpdateOnClick + cb_CheckUpateOnClick.Checked;
                                 break;
                         }
                     }
@@ -129,9 +126,9 @@ namespace ChromiumUpdaterGUI
                     for (int j = 0; j < final_StoredVariables.Length; j++)
                     {
                         if (j == 0)
-                            await File.WriteAllTextAsync(storedVariables, final_StoredVariables[j] + "\n");//throws access denied exception
+                            await File.WriteAllTextAsync(Constants.storedVariables, final_StoredVariables[j] + '\n');//throws access denied exception
                         else
-                            await File.AppendAllTextAsync(storedVariables, final_StoredVariables[j] + "\n");
+                            await File.AppendAllTextAsync(Constants.storedVariables, final_StoredVariables[j] + '\n');
                     }
                 }
                 UpdateFileAttributes(true);
@@ -143,21 +140,21 @@ namespace ChromiumUpdaterGUI
 
         private static void UpdateFileAttributes(bool hideFile)
         {
-            FileAttributes attributes = File.GetAttributes(storedVariables);
+            FileAttributes attributes = File.GetAttributes(Constants.storedVariables);
 
             if (hideFile)
-                File.SetAttributes(storedVariables, attributes | FileAttributes.Hidden);
+                File.SetAttributes(Constants.storedVariables, attributes | FileAttributes.Hidden);
             else
             {
                 attributes &= ~FileAttributes.Hidden;
-                File.SetAttributes(storedVariables, attributes);
+                File.SetAttributes(Constants.storedVariables, attributes);
             }
         }
 
         //the original methods
         private static void CheckStartupStatus(bool startOnBoot)
         {
-            string programPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), appTitle.Replace(' ', '.') + ".exe");
+            string programPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), Constants.appTitle.Replace(' ', '.') + ".exe");
             string currentProgramPath = Process.GetCurrentProcess().MainModule.FileName;
 
             switch (startOnBoot)
@@ -192,12 +189,25 @@ namespace ChromiumUpdaterGUI
                 DisplayErrorMessage("Can't get the latest version number of Chromium.\n" +
                                     "Please check your internet connection.", e);
                 hasInternet = false;
-
             }
-            catch (FileNotFoundException e) 
+            catch (FileNotFoundException) 
             { 
-                DisplayErrorMessage($"A valid install of Chromium could not be found at {Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Chromium\")}\n" +
-                                    "Please make sure that Chromium is installed at thet locatiom.", e); 
+                MessageBox.Show($"A valid install of Chromium could not be found at '{Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "Chromium"}'\n" +
+                                "Please make sure that Chromium is installed at thet location.\n",
+                                Constants.appTitle,
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error);
+
+                DialogResult installResult =
+                MessageBox.Show("Would you like to install Chromium?",
+                                Constants.appTitle,
+                                MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Question);
+
+                if (installResult == DialogResult.Yes)
+                        DownloadNewestVersion().Wait();
+
+                ExitProgram();
             }
             catch (Exception e) 
             { 
@@ -224,7 +234,7 @@ namespace ChromiumUpdaterGUI
                 else
                 {
                     if (!Visible)
-                        notifyIcon.ShowBalloonTip(notificationTimeout, appTitle, "An update is available!", ToolTipIcon.None);
+                        notifyIcon.ShowBalloonTip(Constants.notificationTimeout, Constants.appTitle, "An update is available!", ToolTipIcon.None);
 
                     else
                     {
@@ -232,7 +242,7 @@ namespace ChromiumUpdaterGUI
                         MessageBox.Show($"Current Version: {currentVersion}\n" +
                                         $"Newest version available: {newestVersion}\n" +
                                         "Would you like to update?",
-                                        appTitle,
+                                        Constants.appTitle,
                                         MessageBoxButtons.YesNo,
                                         MessageBoxIcon.Question);
 
@@ -245,7 +255,7 @@ namespace ChromiumUpdaterGUI
 
         private async Task DownloadNewestVersion()
         {
-            notifyIcon.ShowBalloonTip(notificationTimeout, appTitle, "Downloading update file", ToolTipIcon.Info);
+            notifyIcon.ShowBalloonTip(Constants.notificationTimeout, Constants.appTitle, "Downloading update file", ToolTipIcon.Info);
 
             byte[] file;
             string fileLocation = string.Empty;
@@ -291,7 +301,7 @@ namespace ChromiumUpdaterGUI
                                     e.Message.ToString(), e);
             }
 
-            notifyIcon.ShowBalloonTip(notificationTimeout, appTitle, "Update file downloaded succesfully", ToolTipIcon.Info);
+            notifyIcon.ShowBalloonTip(Constants.notificationTimeout, Constants.appTitle, "File downloaded succesfully", ToolTipIcon.Info);
 
             Process[] processes = Process.GetProcessesByName("chrome");
 
@@ -300,7 +310,7 @@ namespace ChromiumUpdaterGUI
                 DialogResult browserOpenDialog =
                 MessageBox.Show("An instance of Chromium is already running!\n" +
                                 "Would you like to close it?",
-                                appTitle,
+                                Constants.appTitle,
                                 MessageBoxButtons.YesNo,
                                 MessageBoxIcon.Exclamation);
 
@@ -310,15 +320,15 @@ namespace ChromiumUpdaterGUI
                         process.Kill();
                 }
 
-                DoUpdate(fileLocation, Visible);
+                InstallUpdate(fileLocation, Visible);
             }
 
             else
-                DoUpdate(fileLocation, Visible);
+                InstallUpdate(fileLocation, Visible);
 
             DialogResult deleteDialog =
             MessageBox.Show($"Would you like to delete the update file from {fileLocation}?",
-                            appTitle,
+                            Constants.appTitle,
                             MessageBoxButtons.YesNo,
                             MessageBoxIcon.Question);
 
@@ -331,25 +341,24 @@ namespace ChromiumUpdaterGUI
             const string upToDateText = "Chromium is up-to-date!";
 
             if (!isVisible)
-                notifyIcon.ShowBalloonTip(notificationTimeout, appTitle, upToDateText, ToolTipIcon.None);
+                notifyIcon.ShowBalloonTip(Constants.notificationTimeout, Constants.appTitle, upToDateText, ToolTipIcon.None);
 
             else
-                MessageBox.Show(upToDateText, appTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(upToDateText, Constants.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private static void DoUpdate(string fileLocation, bool isVisible)
+        private static void InstallUpdate(string fileLocation, bool isVisible)
         {
-            notifyIcon.ShowBalloonTip(notificationTimeout, appTitle, "Installing Update", ToolTipIcon.Info);
+            notifyIcon.ShowBalloonTip(Constants.notificationTimeout, Constants.appTitle, "Installing", ToolTipIcon.Info);
 
-            Process updater = Process.Start(fileLocation);
-            updater.WaitForExit();
+            Process.Start(fileLocation).WaitForExit();
 
-            notifyIcon.ShowBalloonTip(notificationTimeout, appTitle, "Update Complete!", ToolTipIcon.Info);
+            notifyIcon.ShowBalloonTip(Constants.notificationTimeout, Constants.appTitle, "Install Complete!", ToolTipIcon.Info);
             
             if (isVisible)
             {
                 System.Threading.Thread.Sleep(750);
-                MessageBox.Show("Update Complete!", appTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Install Complete!", Constants.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -382,17 +391,24 @@ namespace ChromiumUpdaterGUI
             if (e is HttpRequestException)
             {
                 if (!Visible)
-                    notifyIcon.ShowBalloonTip(notificationTimeout, appTitle, errorMessage, ToolTipIcon.Warning);
+                    notifyIcon.ShowBalloonTip(Constants.notificationTimeout, Constants.appTitle, errorMessage, ToolTipIcon.Warning);
                 else
-                    MessageBox.Show(errorMessage, appTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(errorMessage, Constants.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
                 return;
             }  
 
             string errorLogLocation = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ChromiumUpdater_Error.Log");
             MessageBox.Show("The program has crashed with the following exception:\n" + errorMessage + 
-                            $"\nAn error log has been created at: '{errorLogLocation}'", 
-                            appTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            $"\nAn error log has been created at: '{errorLogLocation}'",
+                            Constants.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            //not tested
+            try
+            {
+                client.Dispose();
+                notifyIcon.Dispose();
+            }
+            catch { return; }
 
             File.WriteAllText(errorLogLocation, e.ToString());
             Environment.Exit(1);
