@@ -35,6 +35,8 @@ namespace ChromiumUpdaterGUI
             this.cb_Startup = new System.Windows.Forms.CheckBox();
             this.b_Exit = new System.Windows.Forms.Button();
             this.cb_CheckUpateOnClick = new System.Windows.Forms.CheckBox();
+            this.cb_HideConfig = new System.Windows.Forms.CheckBox();
+            this.b_DeleteConfig = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // b_CheckUpdate
@@ -99,11 +101,36 @@ namespace ChromiumUpdaterGUI
             this.cb_CheckUpateOnClick.UseVisualStyleBackColor = true;
             this.cb_CheckUpateOnClick.CheckedChanged += new System.EventHandler(this.cb_CheckUpateOnClick_CheckedChanged);
             // 
+            // cb_HideConfig
+            // 
+            this.cb_HideConfig.AutoSize = true;
+            this.cb_HideConfig.Checked = true;
+            this.cb_HideConfig.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.cb_HideConfig.Location = new System.Drawing.Point(220, 66);
+            this.cb_HideConfig.Name = "cb_HideConfig";
+            this.cb_HideConfig.Size = new System.Drawing.Size(115, 21);
+            this.cb_HideConfig.TabIndex = 7;
+            this.cb_HideConfig.Text = "Hide config file";
+            this.cb_HideConfig.UseVisualStyleBackColor = true;
+            this.cb_HideConfig.CheckedChanged += new System.EventHandler(this.cb_HideConfig_CheckedChanged);
+            // 
+            // b_DeleteConfig
+            // 
+            this.b_DeleteConfig.Location = new System.Drawing.Point(331, 39);
+            this.b_DeleteConfig.Name = "b_DeleteConfig";
+            this.b_DeleteConfig.Size = new System.Drawing.Size(99, 27);
+            this.b_DeleteConfig.TabIndex = 8;
+            this.b_DeleteConfig.Text = "Delete Config";
+            this.b_DeleteConfig.UseVisualStyleBackColor = true;
+            this.b_DeleteConfig.Click += new System.EventHandler(this.b_DeleteConfig_Click);
+            // 
             // Form
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(442, 101);
+            this.Controls.Add(this.b_DeleteConfig);
+            this.Controls.Add(this.cb_HideConfig);
             this.Controls.Add(this.cb_CheckUpateOnClick);
             this.Controls.Add(this.b_Exit);
             this.Controls.Add(this.cb_Startup);
@@ -132,6 +159,8 @@ namespace ChromiumUpdaterGUI
         private System.Windows.Forms.CheckBox cb_Startup;
         private System.Windows.Forms.Button b_Exit;
         private System.Windows.Forms.CheckBox cb_CheckUpateOnClick;
+        private System.Windows.Forms.CheckBox cb_HideConfig;
+        private System.Windows.Forms.Button b_DeleteConfig;
     }
 }
 

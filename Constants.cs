@@ -2,12 +2,8 @@
 {
     static class Constants
     {
-        public const string StartOnBoot = "StartOnBoot=";
-        public const string CheckUpdateOnClick = "CheckUpdateOnClick=";
-
         public const string appTitle = "Chromium Updater";
-        public const string storedVariables = "ChromiumUpdater_StoredVariables.txt";
-
-        public const int notificationTimeout = 3000;
+        public const string storedVariables = "ChromiumUpdater_Config.json";
+        public const int notificationTimeout = 0;//this is now depricated apparently
     }
 }

@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 //Chromium Updater made by Ozkut
 //This is the GUI version of Chromium Updater
@@ -12,8 +14,14 @@ namespace ChromiumUpdaterGUI
 {
     public partial class Form : System.Windows.Forms.Form
     {
-        static NotifyIcon notifyIcon = new() { Visible = true, Icon = System.Drawing.SystemIcons.Application };
-        static HttpClient client = new();
+        static readonly NotifyIcon notifyIcon = new()
+        {
+            ContextMenuStrip = new ContextMenuStrip(),
+            Icon = System.Drawing.SystemIcons.Application,
+            Text = Constants.appTitle,
+            Visible = true
+        };
+        static readonly HttpClient client = new();
 
         public Form() => InitializeComponent();
 
@@ -22,12 +30,21 @@ namespace ChromiumUpdaterGUI
             Hide();
             await CheckForUpdate();
             CheckStoredVariables();
+            AddContextItems();
+            UpdateFileAttributes(cb_HideConfig.Checked);
 
-            notifyIcon.BalloonTipClicked += NotifyIconClicked;
-            notifyIcon.Click += NotifyIconClicked;
+            notifyIcon.BalloonTipClicked += ShowWindowClicked;
+            notifyIcon.DoubleClick += ShowWindowClicked;
         }
 
-        private async void NotifyIconClicked(object sender, EventArgs e)
+        private void AddContextItems()
+        {
+            notifyIcon.ContextMenuStrip.Items.Add("Show", null, ShowWindowClicked);
+            notifyIcon.ContextMenuStrip.Items.Add("Check for update", null, CheckUpdateClicked);
+            notifyIcon.ContextMenuStrip.Items.Add("Exit", System.Drawing.SystemIcons.Error.ToBitmap(), ExitClicked);
+        }
+
+        private async void ShowWindow()
         {
             Show();
             WindowState = FormWindowState.Normal;
@@ -36,39 +53,35 @@ namespace ChromiumUpdaterGUI
                 await CheckForUpdate();
         }
 
+        //my events
+        private void ShowWindowClicked(object sender, EventArgs e) => ShowWindow();
+
+        private async void CheckUpdateClicked(object sender, EventArgs e)
+        {
+            ShowWindow();
+            await CheckForUpdate();
+        }
+
+        private static void ExitClicked(object sender, EventArgs e) => ExitProgram();
+
+        //storedVaribles stuff
         private void UpdateCheckboxesFromFile()
         {
             UpdateFileAttributes(false);
 
-            const string True = "True";
-            const string False = "False";
+            SerializeableVariables vars = JsonSerializer.Deserialize<SerializeableVariables>(File.ReadAllText(Constants.storedVariables));
+            
+            bool startOnBootState = bool.Parse(vars.StartOnBoot);
+            bool checkUpdateOnClickState = bool.Parse(vars.CheckUpdateOnClick);
+            bool hideConfigState = bool.Parse(vars.HideConfig);
 
-            foreach (string line in File.ReadAllLines(Constants.storedVariables))
-            {
-                switch (line)
-                {
-                    case Constants.StartOnBoot + True:
-                        cb_Startup.Checked = true;
-                        break;
-
-                    case Constants.StartOnBoot + False:
-                        cb_Startup.Checked = false;
-                        break;
-
-                    case Constants.CheckUpdateOnClick + True:
-                        cb_CheckUpateOnClick.Checked = true;
-                        break;
-
-                    case Constants.CheckUpdateOnClick + False:
-                        cb_CheckUpateOnClick.Checked = false;
-                        break;
-                }
-            }
+            cb_Startup.Checked = startOnBootState;
+            cb_CheckUpateOnClick.Checked = checkUpdateOnClickState;
+            cb_HideConfig.Checked = hideConfigState;
 
             UpdateFileAttributes(true);
         }
 
-        //storedVaribles stuff
         private void CheckStoredVariables()
         {
             if (File.Exists(Constants.storedVariables))
@@ -79,75 +92,34 @@ namespace ChromiumUpdaterGUI
             }
 
             else
-                CreateStoredVariables();
-        }
-
-        private void CreateStoredVariables()
-        {
-            File.WriteAllText(Constants.storedVariables,
-                              Constants.StartOnBoot + cb_Startup.Checked.ToString() + '\n' +
-                              Constants.CheckUpdateOnClick + cb_CheckUpateOnClick.Checked.ToString() + '\n');
-
-            UpdateFileAttributes(true);
+                UpdateStoredVariables();
         }
 
         private async void UpdateStoredVariables()
         {
-            //some very VERY bad code
-            if (File.Exists(Constants.storedVariables))
+            SerializeableVariables vars = new()
             {
-                UpdateFileAttributes(false);
-
-                string[] temp_StoredVariables = File.ReadAllLines(Constants.storedVariables);
-                string[] final_StoredVariables = new string[temp_StoredVariables.Length];
-
-                for (int i = 0; i < temp_StoredVariables.Length; i++)
-                {
-                    if (temp_StoredVariables[i] == $"{Constants.StartOnBoot}True" || temp_StoredVariables[i] == $"{Constants.StartOnBoot}False")
-                        final_StoredVariables[i] = Constants.StartOnBoot + cb_Startup.Checked;
-
-                    else if (temp_StoredVariables[i] == $"{Constants.CheckUpdateOnClick}True" || temp_StoredVariables[i] == $"{Constants.CheckUpdateOnClick}False")
-                        final_StoredVariables[i] = Constants.CheckUpdateOnClick + cb_CheckUpateOnClick.Checked;
-
-                    else
-                    {
-                        switch (i)
-                        {
-                            case 0:
-                                final_StoredVariables[i] = Constants.StartOnBoot + cb_Startup.Checked;
-                                break;
-
-                            case 1:
-                                final_StoredVariables[i] = Constants.CheckUpdateOnClick + cb_CheckUpateOnClick.Checked;
-                                break;
-                        }
-                    }
-
-                    for (int j = 0; j < final_StoredVariables.Length; j++)
-                    {
-                        if (j == 0)
-                            await File.WriteAllTextAsync(Constants.storedVariables, final_StoredVariables[j] + '\n');//throws access denied exception
-                        else
-                            await File.AppendAllTextAsync(Constants.storedVariables, final_StoredVariables[j] + '\n');
-                    }
-                }
-                UpdateFileAttributes(true);
-            }
-
-            else
-                CreateStoredVariables();
+                StartOnBoot = cb_Startup.Checked.ToString(),
+                CheckUpdateOnClick = cb_CheckUpateOnClick.Checked.ToString(),
+                HideConfig = cb_HideConfig.Checked.ToString()
+            };
+            await File.WriteAllTextAsync(Constants.storedVariables, JsonSerializer.Serialize(vars, new JsonSerializerOptions { WriteIndented = true }));
+            UpdateFileAttributes(cb_HideConfig.Checked);
         }
 
         private static void UpdateFileAttributes(bool hideFile)
         {
-            FileAttributes attributes = File.GetAttributes(Constants.storedVariables);
-
-            if (hideFile)
-                File.SetAttributes(Constants.storedVariables, attributes | FileAttributes.Hidden);
-            else
+            if (File.Exists(Constants.storedVariables))
             {
-                attributes &= ~FileAttributes.Hidden;
-                File.SetAttributes(Constants.storedVariables, attributes);
+                FileAttributes attributes = File.GetAttributes(Constants.storedVariables);
+
+                if (hideFile)
+                    File.SetAttributes(Constants.storedVariables, attributes | FileAttributes.Hidden);
+                else
+                {
+                    attributes &= ~FileAttributes.Hidden;
+                    File.SetAttributes(Constants.storedVariables, attributes);
+                }
             }
         }
 
@@ -259,12 +231,14 @@ namespace ChromiumUpdaterGUI
 
             byte[] file;
             string fileLocation = string.Empty;
+            string trimmedFileLocation = string.Empty;
             const string fileName = "mini_installer.sync.exe";
 
             try
             {
                 file = await client.GetByteArrayAsync("https://github.com/Hibbiki/chromium-win64/releases/latest/download/mini_installer.sync.exe");
                 fileLocation = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), fileName);
+                trimmedFileLocation = fileLocation.Trim(fileName.ToCharArray());
                 File.WriteAllBytes(fileLocation, file);
             }
             catch (HttpRequestException e)
@@ -281,18 +255,18 @@ namespace ChromiumUpdaterGUI
             catch (UnauthorizedAccessException e)
             {
                 DisplayErrorMessage("The program does not have the proper permissions to write to " +
-                                    $"'{fileLocation.Trim(fileName.ToCharArray())}'\n" +
+                                    $"'{trimmedFileLocation}'\n" +
                                     "Please check if the program has the correct permissions to write to the given directory.", e);
             }
             catch (DirectoryNotFoundException e)
             {
-                DisplayErrorMessage($"The directory '{fileLocation.Trim(fileName.ToCharArray())}' could not be found.\n" +
+                DisplayErrorMessage($"The directory '{trimmedFileLocation}' could not be found.\n" +
                                     "Please make sure that the directory exists.", e);
             }
             catch (IOException e) 
             {
                 DisplayErrorMessage("An I/O error occured when trying to write the upadte file to " +
-                                    $"'{fileLocation.Trim(fileName.ToCharArray())}'\n" +
+                                    $"'{trimmedFileLocation}'\n" +
                                     "Please make sure that the directory isn't read-only.", e);
             }
             catch (Exception e) 
@@ -319,15 +293,11 @@ namespace ChromiumUpdaterGUI
                     foreach (Process process in processes)
                         process.Kill();
                 }
-
-                InstallUpdate(fileLocation, Visible);
             }
-
-            else
-                InstallUpdate(fileLocation, Visible);
+            InstallUpdate(fileLocation, Visible);
 
             DialogResult deleteDialog =
-            MessageBox.Show($"Would you like to delete the update file from {fileLocation}?",
+            MessageBox.Show($"Would you like to delete the update file from '{fileLocation}'?",
                             Constants.appTitle,
                             MessageBoxButtons.YesNo,
                             MessageBoxIcon.Question);
@@ -364,17 +334,36 @@ namespace ChromiumUpdaterGUI
 
         //checkboxes
         private void cb_Startup_CheckedChanged(object sender, EventArgs e) 
-        { 
+        {
+            UpdateFileAttributes(false);
             UpdateStoredVariables();
             CheckStartupStatus(cb_Startup.Checked);
         }
 
-        private void cb_CheckUpateOnClick_CheckedChanged(object sender, EventArgs e) => UpdateStoredVariables();
+        private void cb_CheckUpateOnClick_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateFileAttributes(false);
+            UpdateStoredVariables();
+        }
+
+        private void cb_HideConfig_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateFileAttributes(false);
+            UpdateStoredVariables();
+            UpdateFileAttributes(cb_HideConfig.Checked);
+        }
 
         //buttons
         private async void b_CheckUpdate_Click(object sender, EventArgs e) => await CheckForUpdate();
 
         private void b_Exit_Click(object sender, EventArgs e) => ExitProgram();
+
+        private void b_DeleteConfig_Click(object sender, EventArgs e)
+        {
+            UpdateFileAttributes(false);
+            if (File.Exists(Constants.storedVariables))
+                File.Delete(Constants.storedVariables);
+        }
 
         //program end stuff
         private void Form_Closing(object sender, FormClosingEventArgs e)
@@ -383,6 +372,7 @@ namespace ChromiumUpdaterGUI
             {
                 Hide();
                 e.Cancel = true;
+                notifyIcon.ShowBalloonTip(Constants.notificationTimeout, Constants.appTitle, "Minimized to system tray", ToolTipIcon.None);
             }
         }
 
@@ -414,12 +404,83 @@ namespace ChromiumUpdaterGUI
             Environment.Exit(1);
         }
 
-        private void ExitProgram()
+        private static void ExitProgram()
         {
             notifyIcon.Visible = false;
             notifyIcon.Dispose();
             client.Dispose();
             Environment.Exit(0);
         }
+
+        private async static void Secret(bool enabled)
+        {
+            if (enabled && DateTime.Today.ToString("M") == "28 March")
+            {
+                notifyIcon.ShowBalloonTip(Constants.notificationTimeout, Constants.appTitle, "Happy birthday to me!", ToolTipIcon.None);
+                System.Threading.Thread.Sleep(500);
+                await Task.Run(() => Process.Start(new ProcessStartInfo("cmd", $"/c start " + "https://www.youtube.com/watch?v=dQw4w9WgXcQ".Replace("&", "^&")) { CreateNoWindow = true }));
+                MessageBox.Show("Happy birthday to me!", Constants.appTitle, MessageBoxButtons.OK, MessageBoxIcon.None);
+            }
+        }
     }
 }
+////some very VERY bad code
+//const string True = "True";
+//const string False = "False";
+
+//foreach (string line in File.ReadAllLines(Constants.storedVariables))
+//{
+//    switch (line)
+//    {
+//        case Constants.StartOnBoot + True:
+//            cb_Startup.Checked = true;
+//            break;
+
+//        case Constants.StartOnBoot + False:
+//            cb_Startup.Checked = false;
+//            break;
+
+//        case Constants.CheckUpdateOnClick + True:
+//            cb_CheckUpateOnClick.Checked = true;
+//            break;
+
+//        case Constants.CheckUpdateOnClick + False:
+//            cb_CheckUpateOnClick.Checked = false;
+//            break;
+//    }
+//}
+
+//some very VERY bad code
+//if (File.Exists(Constants.storedVariables))
+//{
+//    UpdateFileAttributes(false);
+
+//    int length = File.ReadAllLines(Constants.storedVariables).Length;
+//    string[] final_StoredVariables = new string[length];
+
+//    for (int i = 0; i < length; i++)
+//    {
+//        switch (i)
+//        {
+//            case 0:
+//                final_StoredVariables[i] = Constants.StartOnBoot + cb_Startup.Checked;
+//                break;
+
+//            case 1:
+//                final_StoredVariables[i] = Constants.CheckUpdateOnClick + cb_CheckUpateOnClick.Checked;
+//                break;
+//        }
+
+//        for (int j = 0; j < final_StoredVariables.Length; j++)
+//        {
+//            if (j == 0)
+//                await File.WriteAllTextAsync(Constants.storedVariables, final_StoredVariables[j] + '\n');
+//            else
+//                await File.AppendAllTextAsync(Constants.storedVariables, final_StoredVariables[j] + '\n');
+//        }
+//    }
+//    UpdateFileAttributes(true);
+//}
+
+//else
+//    CreateStoredVariables();
