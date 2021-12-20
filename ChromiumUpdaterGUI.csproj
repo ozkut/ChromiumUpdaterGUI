@@ -4,6 +4,13 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net5.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
+    <StartupObject>ChromiumUpdaterGUI.Program</StartupObject>
+    <Authors>Ozkut</Authors>
+    <Company>None</Company>
+    <Product>ChromiumUpdater</Product>
+    <Description>An audo-update program for the Chromium browser.</Description>
+    <Version>1.0</Version>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
   </PropertyGroup>
 
 </Project>

@@ -5,10 +5,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 //Chromium Updater made by Ozkut
-//This is the GUI version of Chromium Updater
+//This is the GUI version of (the now discontinued) Chromium Updater
 
 namespace ChromiumUpdaterGUI
 {
@@ -25,16 +24,22 @@ namespace ChromiumUpdaterGUI
 
         public Form() => InitializeComponent();
 
-        private async void Form_Load(object sender, EventArgs e) 
+        private void Form_Load(object sender, EventArgs e) 
+        {
+            InitilizeStuff();
+            notifyIcon.BalloonTipClicked += ShowWindowClicked;
+            notifyIcon.DoubleClick += ShowWindowClicked;
+        }
+
+        //some methods
+        private async void InitilizeStuff()
         {
             Hide();
             await CheckForUpdate();
             CheckStoredVariables();
             AddContextItems();
             UpdateFileAttributes(cb_HideConfig.Checked);
-
-            notifyIcon.BalloonTipClicked += ShowWindowClicked;
-            notifyIcon.DoubleClick += ShowWindowClicked;
+            Secret(true);
         }
 
         private void AddContextItems()
@@ -53,7 +58,7 @@ namespace ChromiumUpdaterGUI
                 await CheckForUpdate();
         }
 
-        //my events
+        //some events
         private void ShowWindowClicked(object sender, EventArgs e) => ShowWindow();
 
         private async void CheckUpdateClicked(object sender, EventArgs e)
@@ -70,16 +75,28 @@ namespace ChromiumUpdaterGUI
             UpdateFileAttributes(false);
 
             SerializeableVariables vars = JsonSerializer.Deserialize<SerializeableVariables>(File.ReadAllText(Constants.storedVariables));
+            bool startOnBootState, checkUpdateOnClickState, hideConfigState;
             
-            bool startOnBootState = bool.Parse(vars.StartOnBoot);
-            bool checkUpdateOnClickState = bool.Parse(vars.CheckUpdateOnClick);
-            bool hideConfigState = bool.Parse(vars.HideConfig);
+            while (true)
+            {
+                try
+                {
+                    startOnBootState = bool.Parse(vars.StartOnBoot);
+                    checkUpdateOnClickState = bool.Parse(vars.CheckUpdateOnClick);
+                    hideConfigState = bool.Parse(vars.HideConfig);
+                    break;
+                }
+                catch (FormatException)
+                {
+                    UpdateStoredVariables();
+                }
+            }
 
             cb_Startup.Checked = startOnBootState;
             cb_CheckUpateOnClick.Checked = checkUpdateOnClickState;
             cb_HideConfig.Checked = hideConfigState;
 
-            UpdateFileAttributes(true);
+            UpdateFileAttributes(cb_HideConfig.Checked);
         }
 
         private void CheckStoredVariables()
@@ -90,9 +107,11 @@ namespace ChromiumUpdaterGUI
                 if (cb_Startup.Checked)
                     CheckStartupStatus(cb_Startup.Checked);
             }
-
             else
+            {
+                Directory.CreateDirectory(Constants.storedVariablesDirectory);
                 UpdateStoredVariables();
+            }
         }
 
         private async void UpdateStoredVariables()
@@ -112,14 +131,10 @@ namespace ChromiumUpdaterGUI
             if (File.Exists(Constants.storedVariables))
             {
                 FileAttributes attributes = File.GetAttributes(Constants.storedVariables);
-
                 if (hideFile)
                     File.SetAttributes(Constants.storedVariables, attributes | FileAttributes.Hidden);
                 else
-                {
-                    attributes &= ~FileAttributes.Hidden;
-                    File.SetAttributes(Constants.storedVariables, attributes);
-                }
+                    File.SetAttributes(Constants.storedVariables, attributes &= ~FileAttributes.Hidden);
             }
         }
 
@@ -164,7 +179,7 @@ namespace ChromiumUpdaterGUI
             }
             catch (FileNotFoundException) 
             { 
-                MessageBox.Show($"A valid install of Chromium could not be found at '{Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "Chromium"}'\n" +
+                MessageBox.Show($"A valid install of Chromium could not be found at '{Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Chromium"}'\n" +
                                 "Please make sure that Chromium is installed at thet location.\n",
                                 Constants.appTitle,
                                 MessageBoxButtons.OK,
@@ -360,9 +375,15 @@ namespace ChromiumUpdaterGUI
 
         private void b_DeleteConfig_Click(object sender, EventArgs e)
         {
-            UpdateFileAttributes(false);
-            if (File.Exists(Constants.storedVariables))
-                File.Delete(Constants.storedVariables);
+            DialogResult deleteConfigResult = 
+            MessageBox.Show("Are you sure you want to delete the configuration file?\n",
+            Constants.appTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (deleteConfigResult == DialogResult.Yes)
+            {
+                UpdateFileAttributes(false);
+                if (File.Exists(Constants.storedVariables))
+                    File.Delete(Constants.storedVariables);
+            }
         }
 
         //program end stuff
@@ -381,25 +402,22 @@ namespace ChromiumUpdaterGUI
             if (e is HttpRequestException)
             {
                 if (!Visible)
-                    notifyIcon.ShowBalloonTip(Constants.notificationTimeout, Constants.appTitle, errorMessage, ToolTipIcon.Warning);
+                    notifyIcon.ShowBalloonTip(Constants.notificationTimeout, Constants.appTitle, errorMessage, ToolTipIcon.Error);
                 else
                     MessageBox.Show(errorMessage, Constants.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-
                 return;
             }  
 
-            string errorLogLocation = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ChromiumUpdater_Error.Log");
+            string errorLogLocation = Path.Combine(Constants.storedVariablesDirectory, "ChromiumUpdater_Error.Log");
             MessageBox.Show("The program has crashed with the following exception:\n" + errorMessage + 
                             $"\nAn error log has been created at: '{errorLogLocation}'",
                             Constants.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
-            //not tested
-            try
-            {
-                client.Dispose();
-                notifyIcon.Dispose();
-            }
-            catch { return; }
 
+            if (!Directory.Exists(Constants.storedVariablesDirectory))
+                Directory.CreateDirectory(Constants.storedVariablesDirectory);
+
+            client.Dispose();
+            notifyIcon.Dispose();
             File.WriteAllText(errorLogLocation, e.ToString());
             Environment.Exit(1);
         }

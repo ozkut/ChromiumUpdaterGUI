@@ -73,7 +73,7 @@ namespace ChromiumUpdaterGUI
             this.cb_Startup.Location = new System.Drawing.Point(220, 39);
             this.cb_Startup.Name = "cb_Startup";
             this.cb_Startup.Size = new System.Drawing.Size(105, 21);
-            this.cb_Startup.TabIndex = 4;
+            this.cb_Startup.TabIndex = 2;
             this.cb_Startup.Text = "Start on boot";
             this.cb_Startup.UseVisualStyleBackColor = true;
             this.cb_Startup.CheckedChanged += new System.EventHandler(this.cb_Startup_CheckedChanged);
@@ -96,7 +96,7 @@ namespace ChromiumUpdaterGUI
             this.cb_CheckUpateOnClick.Location = new System.Drawing.Point(220, 12);
             this.cb_CheckUpateOnClick.Name = "cb_CheckUpateOnClick";
             this.cb_CheckUpateOnClick.Size = new System.Drawing.Size(210, 21);
-            this.cb_CheckUpateOnClick.TabIndex = 6;
+            this.cb_CheckUpateOnClick.TabIndex = 1;
             this.cb_CheckUpateOnClick.Text = "Check for updates on maximise";
             this.cb_CheckUpateOnClick.UseVisualStyleBackColor = true;
             this.cb_CheckUpateOnClick.CheckedChanged += new System.EventHandler(this.cb_CheckUpateOnClick_CheckedChanged);
@@ -109,7 +109,7 @@ namespace ChromiumUpdaterGUI
             this.cb_HideConfig.Location = new System.Drawing.Point(220, 66);
             this.cb_HideConfig.Name = "cb_HideConfig";
             this.cb_HideConfig.Size = new System.Drawing.Size(115, 21);
-            this.cb_HideConfig.TabIndex = 7;
+            this.cb_HideConfig.TabIndex = 3;
             this.cb_HideConfig.Text = "Hide config file";
             this.cb_HideConfig.UseVisualStyleBackColor = true;
             this.cb_HideConfig.CheckedChanged += new System.EventHandler(this.cb_HideConfig_CheckedChanged);
@@ -119,7 +119,7 @@ namespace ChromiumUpdaterGUI
             this.b_DeleteConfig.Location = new System.Drawing.Point(331, 39);
             this.b_DeleteConfig.Name = "b_DeleteConfig";
             this.b_DeleteConfig.Size = new System.Drawing.Size(99, 27);
-            this.b_DeleteConfig.TabIndex = 8;
+            this.b_DeleteConfig.TabIndex = 4;
             this.b_DeleteConfig.Text = "Delete Config";
             this.b_DeleteConfig.UseVisualStyleBackColor = true;
             this.b_DeleteConfig.Click += new System.EventHandler(this.b_DeleteConfig_Click);
