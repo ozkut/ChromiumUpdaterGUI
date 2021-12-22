@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
 using System.Text.Json;
+using Microsoft.Win32;
 
 //Chromium Updater made by Ozkut
 //This is the GUI version of (the now discontinued) Chromium Updater
@@ -141,20 +142,23 @@ namespace ChromiumUpdaterGUI
         //the original methods
         private static void CheckStartupStatus(bool startOnBoot)
         {
-            string programPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), Constants.appTitle.Replace(' ', '.') + ".exe");
             string currentProgramPath = Process.GetCurrentProcess().MainModule.FileName;
+            string actualLocation = Path.Combine(Constants.storedVariablesDirectory, Constants.appTitle + ".exe");
+
+            if (!File.Exists(actualLocation))
+                File.Copy(currentProgramPath, actualLocation);
+
+            //inside HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+            RegistryKey regKey = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
 
             switch (startOnBoot)
             {
                 case true:
-                    if (File.Exists(programPath))
-                        File.Replace(currentProgramPath, programPath, null);
-                    else
-                        File.Copy(currentProgramPath, programPath);
+                    regKey.SetValue(Constants.appTitle, actualLocation);
                     break;
 
                 case false:
-                    File.Delete(programPath);
+                    regKey.DeleteValue(Constants.appTitle, false);
                     break;
             }
         }

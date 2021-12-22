@@ -13,4 +13,10 @@
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <Optimize>true</Optimize>
+    <WarningLevel>1</WarningLevel>
+    <DefineConstants />
+  </PropertyGroup>
+
 </Project>
