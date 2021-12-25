@@ -128,6 +128,8 @@ namespace ChromiumUpdaterGUI
             // cb_CheckSelfUpdate
             // 
             this.cb_CheckSelfUpdate.AutoSize = true;
+            this.cb_CheckSelfUpdate.Checked = true;
+            this.cb_CheckSelfUpdate.CheckState = System.Windows.Forms.CheckState.Checked;
             this.cb_CheckSelfUpdate.Location = new System.Drawing.Point(12, 93);
             this.cb_CheckSelfUpdate.Name = "cb_CheckSelfUpdate";
             this.cb_CheckSelfUpdate.Size = new System.Drawing.Size(151, 21);
