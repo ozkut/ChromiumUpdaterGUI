@@ -69,7 +69,7 @@ namespace ChromiumUpdaterGUI
             {
                 await Task.Delay(500);
 
-                const string ChromiumUpdater = "ChromiumUpdater";
+                const string ChromiumUpdater = "ChromiumUpdaterGUI";
                 GitHubClient githubClient = new(new ProductHeaderValue(ChromiumUpdater));
                 System.Collections.Generic.IReadOnlyList<Release> releases = await githubClient.Repository.Release.GetAll("ozkut", ChromiumUpdater);
                 Release latest = releases[0];

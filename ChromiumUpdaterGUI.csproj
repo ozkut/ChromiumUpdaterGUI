@@ -7,16 +7,21 @@
     <StartupObject>ChromiumUpdaterGUI.Program</StartupObject>
     <Authors>Ozkut</Authors>
     <Company>None</Company>
-    <Product>ChromiumUpdater</Product>
+    <Product>Chromium Updater</Product>
     <Description>An audo-update program for the Chromium browser.</Description>
-    <Version>1.0</Version>
+    <Version>1.2</Version>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <PackageId>Chromium Updater</PackageId>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <Optimize>true</Optimize>
     <WarningLevel>1</WarningLevel>
     <DefineConstants />
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <Optimize>false</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
