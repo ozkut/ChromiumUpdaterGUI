@@ -37,14 +37,15 @@ namespace ChromiumUpdaterGUI
             this.cb_CheckUpateOnClick = new System.Windows.Forms.CheckBox();
             this.cb_HideConfig = new System.Windows.Forms.CheckBox();
             this.b_DeleteConfig = new System.Windows.Forms.Button();
+            this.cb_CheckSelfUpdate = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // b_CheckUpdate
             // 
-            this.b_CheckUpdate.Location = new System.Drawing.Point(12, 66);
+            this.b_CheckUpdate.Location = new System.Drawing.Point(250, 62);
             this.b_CheckUpdate.Name = "b_CheckUpdate";
             this.b_CheckUpdate.Size = new System.Drawing.Size(124, 27);
-            this.b_CheckUpdate.TabIndex = 0;
+            this.b_CheckUpdate.TabIndex = 5;
             this.b_CheckUpdate.Text = "Check for updates";
             this.b_CheckUpdate.UseVisualStyleBackColor = true;
             this.b_CheckUpdate.Click += new System.EventHandler(this.b_CheckUpdate_Click);
@@ -52,7 +53,7 @@ namespace ChromiumUpdaterGUI
             // l_CurrentVersion
             // 
             this.l_CurrentVersion.AutoSize = true;
-            this.l_CurrentVersion.Location = new System.Drawing.Point(12, 9);
+            this.l_CurrentVersion.Location = new System.Drawing.Point(250, 9);
             this.l_CurrentVersion.Name = "l_CurrentVersion";
             this.l_CurrentVersion.Size = new System.Drawing.Size(105, 17);
             this.l_CurrentVersion.TabIndex = 1;
@@ -61,7 +62,7 @@ namespace ChromiumUpdaterGUI
             // l_NewestVersion
             // 
             this.l_NewestVersion.AutoSize = true;
-            this.l_NewestVersion.Location = new System.Drawing.Point(12, 36);
+            this.l_NewestVersion.Location = new System.Drawing.Point(250, 36);
             this.l_NewestVersion.Name = "l_NewestVersion";
             this.l_NewestVersion.Size = new System.Drawing.Size(105, 17);
             this.l_NewestVersion.TabIndex = 2;
@@ -70,20 +71,20 @@ namespace ChromiumUpdaterGUI
             // cb_Startup
             // 
             this.cb_Startup.AutoSize = true;
-            this.cb_Startup.Location = new System.Drawing.Point(220, 39);
+            this.cb_Startup.Location = new System.Drawing.Point(12, 12);
             this.cb_Startup.Name = "cb_Startup";
             this.cb_Startup.Size = new System.Drawing.Size(105, 21);
-            this.cb_Startup.TabIndex = 2;
+            this.cb_Startup.TabIndex = 1;
             this.cb_Startup.Text = "Start on boot";
             this.cb_Startup.UseVisualStyleBackColor = true;
             this.cb_Startup.CheckedChanged += new System.EventHandler(this.cb_Startup_CheckedChanged);
             // 
             // b_Exit
             // 
-            this.b_Exit.Location = new System.Drawing.Point(355, 70);
+            this.b_Exit.Location = new System.Drawing.Point(355, 93);
             this.b_Exit.Name = "b_Exit";
-            this.b_Exit.Size = new System.Drawing.Size(75, 23);
-            this.b_Exit.TabIndex = 5;
+            this.b_Exit.Size = new System.Drawing.Size(75, 25);
+            this.b_Exit.TabIndex = 0;
             this.b_Exit.Text = "Exit";
             this.b_Exit.UseVisualStyleBackColor = true;
             this.b_Exit.Click += new System.EventHandler(this.b_Exit_Click);
@@ -93,10 +94,10 @@ namespace ChromiumUpdaterGUI
             this.cb_CheckUpateOnClick.AutoSize = true;
             this.cb_CheckUpateOnClick.Checked = true;
             this.cb_CheckUpateOnClick.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.cb_CheckUpateOnClick.Location = new System.Drawing.Point(220, 12);
+            this.cb_CheckUpateOnClick.Location = new System.Drawing.Point(12, 39);
             this.cb_CheckUpateOnClick.Name = "cb_CheckUpateOnClick";
             this.cb_CheckUpateOnClick.Size = new System.Drawing.Size(210, 21);
-            this.cb_CheckUpateOnClick.TabIndex = 1;
+            this.cb_CheckUpateOnClick.TabIndex = 2;
             this.cb_CheckUpateOnClick.Text = "Check for updates on maximise";
             this.cb_CheckUpateOnClick.UseVisualStyleBackColor = true;
             this.cb_CheckUpateOnClick.CheckedChanged += new System.EventHandler(this.cb_CheckUpateOnClick_CheckedChanged);
@@ -106,7 +107,7 @@ namespace ChromiumUpdaterGUI
             this.cb_HideConfig.AutoSize = true;
             this.cb_HideConfig.Checked = true;
             this.cb_HideConfig.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.cb_HideConfig.Location = new System.Drawing.Point(220, 66);
+            this.cb_HideConfig.Location = new System.Drawing.Point(12, 66);
             this.cb_HideConfig.Name = "cb_HideConfig";
             this.cb_HideConfig.Size = new System.Drawing.Size(115, 21);
             this.cb_HideConfig.TabIndex = 3;
@@ -116,19 +117,30 @@ namespace ChromiumUpdaterGUI
             // 
             // b_DeleteConfig
             // 
-            this.b_DeleteConfig.Location = new System.Drawing.Point(331, 39);
+            this.b_DeleteConfig.Location = new System.Drawing.Point(250, 93);
             this.b_DeleteConfig.Name = "b_DeleteConfig";
-            this.b_DeleteConfig.Size = new System.Drawing.Size(99, 27);
-            this.b_DeleteConfig.TabIndex = 4;
+            this.b_DeleteConfig.Size = new System.Drawing.Size(99, 25);
+            this.b_DeleteConfig.TabIndex = 6;
             this.b_DeleteConfig.Text = "Delete Config";
             this.b_DeleteConfig.UseVisualStyleBackColor = true;
             this.b_DeleteConfig.Click += new System.EventHandler(this.b_DeleteConfig_Click);
+            // 
+            // cb_CheckSelfUpdate
+            // 
+            this.cb_CheckSelfUpdate.AutoSize = true;
+            this.cb_CheckSelfUpdate.Location = new System.Drawing.Point(12, 93);
+            this.cb_CheckSelfUpdate.Name = "cb_CheckSelfUpdate";
+            this.cb_CheckSelfUpdate.Size = new System.Drawing.Size(151, 21);
+            this.cb_CheckSelfUpdate.TabIndex = 4;
+            this.cb_CheckSelfUpdate.Text = "Check for self update";
+            this.cb_CheckSelfUpdate.UseVisualStyleBackColor = true;
             // 
             // Form
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(442, 101);
+            this.ClientSize = new System.Drawing.Size(442, 122);
+            this.Controls.Add(this.cb_CheckSelfUpdate);
             this.Controls.Add(this.b_DeleteConfig);
             this.Controls.Add(this.cb_HideConfig);
             this.Controls.Add(this.cb_CheckUpateOnClick);
@@ -161,6 +173,7 @@ namespace ChromiumUpdaterGUI
         private System.Windows.Forms.CheckBox cb_CheckUpateOnClick;
         private System.Windows.Forms.CheckBox cb_HideConfig;
         private System.Windows.Forms.Button b_DeleteConfig;
+        private System.Windows.Forms.CheckBox cb_CheckSelfUpdate;
     }
 }
 
