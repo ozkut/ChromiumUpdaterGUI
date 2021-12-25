@@ -76,7 +76,7 @@ namespace ChromiumUpdaterGUI
 
                 float currentVersion = float.Parse(FileVersionInfo.GetVersionInfo(Constants.Paths.currentPath).ProductVersion);//version of currently running program
                 float installedVersion = float.Parse(FileVersionInfo.GetVersionInfo(Constants.Paths.installPath).ProductVersion);
-                float latestVersion = float.Parse(latest.Name.ToString().TrimStart('v'));
+                float latestVersion = float.Parse(latest.Name.ToString());
 
                 string currentVersionString = currentVersion.ToString("0.0");
                 string installedVersionString = installedVersion.ToString("0.0");
