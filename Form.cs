@@ -198,7 +198,7 @@ namespace ChromiumUpdaterGUI
                 if (installResult == DialogResult.Yes)
                         DownloadNewestVersion().Wait();
                 
-                ExitProgram();
+                //fix - check for update again
             }
             catch (Exception e) 
             { 
