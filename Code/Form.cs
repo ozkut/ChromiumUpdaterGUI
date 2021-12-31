@@ -125,10 +125,10 @@ namespace ChromiumUpdaterGUI
             notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Updating Chromum Updater", ToolTipIcon.Info);
             string fileLocation = Constants.Paths.installPath;
             if (File.Exists(fileLocation))
-                File.Move(fileLocation, "old.exe");
+                File.Move(fileLocation, Constants.Other.appTitle + " old.exe");
             try
             {
-                byte[] file = await client.GetByteArrayAsync("https://github.com/ozkut/ChromiumUpdater/releases/latest/download/Chromium.Updater.exe");
+                byte[] file = await client.GetByteArrayAsync("https://github.com/ozkut/ChromiumUpdaterGUI/releases/latest/download/Chromium.Updater.exe");
                 File.WriteAllBytes(fileLocation, file);
             }
             catch (Exception e) { DisplayErrorMessage("An error has occured when trying to update Chromium Updater.\n", e); }
