@@ -125,7 +125,7 @@ namespace ChromiumUpdaterGUI
             notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Updating Chromum Updater", ToolTipIcon.Info);
             string fileLocation = Constants.Paths.installPath;
             if (File.Exists(fileLocation))
-                File.Delete(fileLocation);
+                File.Move(fileLocation, "old.exe");
             try
             {
                 byte[] file = await client.GetByteArrayAsync("https://github.com/ozkut/ChromiumUpdater/releases/latest/download/Chromium.Updater.exe");
