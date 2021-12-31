@@ -8,20 +8,20 @@ using System.Text.Json;
 using Octokit;
 
 //Chromium Updater made by Ozkut
-//This is the GUI version of (the now discontinued) Chromium Updater
+//This is the GUI version of (the now unsupported) Chromium Updater
 
 namespace ChromiumUpdaterGUI
 {
     public partial class Form : System.Windows.Forms.Form
     {
-        static readonly NotifyIcon notifyIcon = new()
+        private static readonly NotifyIcon notifyIcon = new()
         {
             ContextMenuStrip = new ContextMenuStrip(),
             Icon = System.Drawing.SystemIcons.Application,
             Text = Constants.Other.appTitle,
             Visible = true
         };
-        static readonly HttpClient client = new();
+        private static readonly HttpClient client = new();
 
         public Form() => InitializeComponent();
 
@@ -32,16 +32,29 @@ namespace ChromiumUpdaterGUI
             notifyIcon.DoubleClick += ShowWindowClicked;
         }
 
-        //some methods
+        //my methods
         private async void InitilizeStuff()
         {
             Hide();
-            await CheckForUpdate();
             CheckStoredVariables();
+            await CheckForUpdate();
             AddContextItems();
             CheckForSelfUpdate(cb_CheckSelfUpdate.Checked);
             UpdateFileAttributes(cb_HideConfig.Checked);
             Secret(true);
+            ShowDebugWarning();
+            l_State.Text = "Idle";
+        }
+
+        private static async void ShowDebugWarning()
+        {
+            #if DEBUG
+            const string DebugMode = "Program is currently in debug mode!";
+            string DebugTitle = Constants.Other.appTitle + " Debug Mode";
+            notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, DebugTitle, DebugMode, ToolTipIcon.Warning);
+            await Task.Delay(500);
+            MessageBox.Show(DebugMode, DebugTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            #endif
         }
 
         private void AddContextItems()
@@ -55,7 +68,6 @@ namespace ChromiumUpdaterGUI
         {
             Show();
             WindowState = FormWindowState.Normal;
-
             if (cb_CheckUpateOnClick.Checked)
                 await CheckForUpdate();
         }
@@ -72,11 +84,10 @@ namespace ChromiumUpdaterGUI
                 const string ChromiumUpdater = "ChromiumUpdaterGUI";
                 GitHubClient githubClient = new(new ProductHeaderValue(ChromiumUpdater));
                 System.Collections.Generic.IReadOnlyList<Release> releases = await githubClient.Repository.Release.GetAll("ozkut", ChromiumUpdater);
-                Release latest = releases[0];
 
                 float currentVersion = float.Parse(FileVersionInfo.GetVersionInfo(Constants.Paths.currentPath).ProductVersion);//version of currently running program
                 float installedVersion = float.Parse(FileVersionInfo.GetVersionInfo(Constants.Paths.installPath).ProductVersion);
-                float latestVersion = float.Parse(latest.Name.ToString());
+                float latestVersion = float.Parse(releases[0].Name.ToString());
 
                 string currentVersionString = currentVersion.ToString("0.0");
                 string installedVersionString = installedVersion.ToString("0.0");
@@ -112,16 +123,16 @@ namespace ChromiumUpdaterGUI
         private async Task UpdateSelf()
         {
             notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Updating Chromum Updater", ToolTipIcon.Info);
+            string fileLocation = Constants.Paths.installPath;
+            if (File.Exists(fileLocation))
+                File.Delete(fileLocation);
             try
             {
                 byte[] file = await client.GetByteArrayAsync("https://github.com/ozkut/ChromiumUpdater/releases/latest/download/Chromium.Updater.exe");
-                string fileLocation = Constants.Paths.installPath;
-                if (File.Exists(fileLocation))
-                    File.Delete(fileLocation);
                 File.WriteAllBytes(fileLocation, file);
-                notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Update Complete!", ToolTipIcon.Info);
             }
             catch (Exception e) { DisplayErrorMessage("An error has occured when trying to update Chromium Updater.\n", e); }
+            notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Update Complete!", ToolTipIcon.Info);
         }
 
         //some events
@@ -210,7 +221,6 @@ namespace ChromiumUpdaterGUI
                 case true:
                     regKey.SetValue(Constants.Other.appTitle, Constants.Paths.installPath);
                     break;
-
                 case false:
                     regKey.DeleteValue(Constants.Other.appTitle, false);
                     break;
@@ -250,9 +260,10 @@ namespace ChromiumUpdaterGUI
                                 MessageBoxIcon.Question);
 
                 if (installResult == DialogResult.Yes)
-                    DownloadNewestVersion().Wait();
-
-                await Task.Run(() => CheckForUpdate());
+                {
+                    await DownloadNewestVersion();
+                    await Task.Run(() => CheckForUpdate());
+                }
             }
             catch (Exception e)
             {
@@ -297,23 +308,22 @@ namespace ChromiumUpdaterGUI
                 }
             }
         }
-
+        
         //i can *probably* modify this so it can download both this program and chromium, but i'm too lazy
         private async Task DownloadNewestVersion()
         {
-            notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Downloading update file", ToolTipIcon.Info);
-
-            byte[] file;
+            notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Downloading file", ToolTipIcon.Info);
             string fileLocation = string.Empty;
             string trimmedFileLocation = string.Empty;
             const string fileName = "mini_installer.sync.exe";
 
+            l_State.Text = "Downloading";
             try
             {
-                file = await client.GetByteArrayAsync("https://github.com/Hibbiki/chromium-win64/releases/latest/download/mini_installer.sync.exe");
+                byte[] file = await client.GetByteArrayAsync("https://github.com/Hibbiki/chromium-win64/releases/latest/download/mini_installer.sync.exe");
                 fileLocation = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), fileName);
                 trimmedFileLocation = fileLocation.Trim(fileName.ToCharArray());
-                File.WriteAllBytes(fileLocation, file);
+                await File.WriteAllBytesAsync(fileLocation, file);
             }
             catch (HttpRequestException e)
             {
@@ -322,9 +332,7 @@ namespace ChromiumUpdaterGUI
             }
             catch (PathTooLongException e)
             {
-                DisplayErrorMessage($"The path '{fileLocation}' is too long.\n"/* +
-                                    "Please enter a shorter file path."*/, e);
-                //second part will be used when the option to sellect a custom location is added
+                DisplayErrorMessage($"The path '{fileLocation}' is too long.\n", e);
             }
             catch (UnauthorizedAccessException e)
             {
@@ -349,6 +357,7 @@ namespace ChromiumUpdaterGUI
                                     e.Message.ToString(), e);
             }
 
+            l_State.Text = "Idle";
             notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "File downloaded succesfully", ToolTipIcon.Info);
 
             Process[] processes = Process.GetProcessesByName("chrome");
@@ -368,7 +377,13 @@ namespace ChromiumUpdaterGUI
                         process.Kill();
                 }
             }
+            else
+                await Task.Delay(500);
+
+            l_State.Text = "Installing";
+            notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Installing", ToolTipIcon.Info);
             InstallUpdate(fileLocation, Visible);
+            l_State.Text = "Idle";
 
             DialogResult deleteDialog =
             MessageBox.Show($"Would you like to delete the update file from '{fileLocation}'?",
@@ -383,10 +398,8 @@ namespace ChromiumUpdaterGUI
         private static void IsUpToDate(bool isVisible)
         {
             const string upToDateText = "Chromium is up-to-date!";
-
             if (!isVisible)
                 notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, upToDateText, ToolTipIcon.None);
-
             else
                 MessageBox.Show(upToDateText, Constants.Other.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
@@ -448,7 +461,7 @@ namespace ChromiumUpdaterGUI
         //program end stuff
         private void Form_Closing(object sender, FormClosingEventArgs e)
         {
-            if (e.CloseReason == CloseReason.UserClosing || e.CloseReason == CloseReason.None)
+            if (e.CloseReason == CloseReason.UserClosing)
             {
                 Hide();
                 e.Cancel = true;
@@ -461,24 +474,27 @@ namespace ChromiumUpdaterGUI
             if (e is HttpRequestException)
             {
                 if (!Visible)
-                    notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, errorMessage, ToolTipIcon.Error);
+                    notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, errorMessage, ToolTipIcon.Warning);
                 else
                     MessageBox.Show(errorMessage, Constants.Other.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            string errorLogLocation = Path.Combine(Constants.StoredVariables.directory, Constants.Other.errorLogFileName);
-            MessageBox.Show("The program has crashed with the following exception:\n" + errorMessage +
-                            $"\nAn error log has been created at: '{errorLogLocation}'",
-                            Constants.Other.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            else
+            {
+                string errorLogLocation = Path.Combine(Constants.StoredVariables.directory, Constants.Other.errorLogFileName);
+                MessageBox.Show("The program has crashed with the following exception:\n" + errorMessage +
+                                $"\nAn error log has been created at: '{errorLogLocation}'",
+                                Constants.Other.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Error);
 
-            if (!Directory.Exists(Constants.StoredVariables.directory))
-                Directory.CreateDirectory(Constants.StoredVariables.directory);
+                if (!Directory.Exists(Constants.StoredVariables.directory))
+                    Directory.CreateDirectory(Constants.StoredVariables.directory);
 
-            client.Dispose();
-            notifyIcon.Dispose();
-            File.WriteAllText(errorLogLocation, e.ToString());
-            Environment.Exit(1);
+                client.Dispose();
+                notifyIcon.Dispose();
+                File.WriteAllText(errorLogLocation, e.ToString());
+                Environment.Exit(1);
+            }
         }
 
         private static void ExitProgram()
@@ -494,7 +510,7 @@ namespace ChromiumUpdaterGUI
             if (enabled && DateTime.Today.ToString("M") == "28 March")
             {
                 notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Happy birthday to me!", ToolTipIcon.None);
-                System.Threading.Thread.Sleep(500);
+                await Task.Delay(500);
                 await Task.Run(() => Process.Start(new ProcessStartInfo("cmd", $"/c start " + "https://www.youtube.com/watch?v=dQw4w9WgXcQ".Replace("&", "^&")) { CreateNoWindow = true }));
                 MessageBox.Show("Happy birthday to me!", Constants.Other.appTitle, MessageBoxButtons.OK, MessageBoxIcon.None);
             }
