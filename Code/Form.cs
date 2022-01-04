@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
 using System.Text.Json;
-using Octokit;
 
 //Chromium Updater made by Ozkut
 //This is the GUI version of (the now unsupported) Chromium Updater
@@ -39,7 +38,6 @@ namespace ChromiumUpdaterGUI
             CheckStoredVariables();
             await CheckForUpdate();
             AddContextItems();
-            CheckForSelfUpdate(cb_CheckSelfUpdate.Checked);
             UpdateFileAttributes(cb_HideConfig.Checked);
             Secret(true);
             ShowDebugWarning();
@@ -59,6 +57,7 @@ namespace ChromiumUpdaterGUI
 
         private void AddContextItems()
         {
+            //could add a self update check thing here
             notifyIcon.ContextMenuStrip.Items.Add("Show", null, ShowWindowClicked);
             notifyIcon.ContextMenuStrip.Items.Add("Check for update", null, CheckUpdateClicked);
             notifyIcon.ContextMenuStrip.Items.Add("Exit", System.Drawing.SystemIcons.Error.ToBitmap(), ExitClicked);
@@ -70,69 +69,6 @@ namespace ChromiumUpdaterGUI
             WindowState = FormWindowState.Normal;
             if (cb_CheckUpateOnClick.Checked)
                 await CheckForUpdate();
-        }
-
-        private async void CheckForSelfUpdate(bool checkForSelfUpdate)
-        {
-            if (!File.Exists(Constants.Paths.installPath))
-                File.Copy(Constants.Paths.currentPath, Constants.Paths.installPath);
-
-            else if (checkForSelfUpdate)
-            {
-                await Task.Delay(500);
-
-                const string ChromiumUpdater = "ChromiumUpdaterGUI";
-                GitHubClient githubClient = new(new ProductHeaderValue(ChromiumUpdater));
-                System.Collections.Generic.IReadOnlyList<Release> releases = await githubClient.Repository.Release.GetAll("ozkut", ChromiumUpdater);
-
-                float currentVersion = float.Parse(FileVersionInfo.GetVersionInfo(Constants.Paths.currentPath).ProductVersion);//version of currently running program
-                float installedVersion = float.Parse(FileVersionInfo.GetVersionInfo(Constants.Paths.installPath).ProductVersion);
-                float latestVersion = float.Parse(releases[0].Name.ToString());
-
-                string currentVersionString = currentVersion.ToString("0.0");
-                string installedVersionString = installedVersion.ToString("0.0");
-                string latestVersionString = latestVersion.ToString("0.0");
-
-                await Task.Delay(1000);
-                if (installedVersion < currentVersion)
-                {
-                    DialogResult updateSelfResult =
-                    MessageBox.Show($"The currently installed version of Chromium Updater (Version {installedVersionString}) is older than the version that is currently running! (Version {currentVersionString})\n" +
-                                    "Would you like to replace the old version with the version currently running?",
-                                    Constants.Other.appTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                    if (updateSelfResult == DialogResult.Yes)
-                        File.Copy(Constants.Paths.currentPath, Constants.Paths.installPath, true);
-                }
-                else if (installedVersion > currentVersion)
-                {
-                    MessageBox.Show($"A newer version (Version {installedVersionString}) of Chromium Updater is already installed on your system!",
-                                    Constants.Other.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-                else if (latestVersion > currentVersion || latestVersion > installedVersion)
-                {
-                    DialogResult installLatestDialog =
-                    MessageBox.Show($"A newer version of Chromium Updater is available! (Version {latestVersionString})\n" +
-                                    $"Would you like yo update from Version {installedVersionString} that is currently running?",
-                                    Constants.Other.appTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-                    if (installLatestDialog == DialogResult.Yes)
-                        await Task.Run(() => UpdateSelf());
-                }
-            }
-        }
-
-        private async Task UpdateSelf()
-        {
-            notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Updating Chromum Updater", ToolTipIcon.Info);
-            string fileLocation = Constants.Paths.installPath;
-            if (File.Exists(fileLocation))
-                File.Move(fileLocation, Constants.Other.appTitle + " old.exe");
-            try
-            {
-                byte[] file = await client.GetByteArrayAsync("https://github.com/ozkut/ChromiumUpdaterGUI/releases/latest/download/Chromium.Updater.exe");
-                File.WriteAllBytes(fileLocation, file);
-            }
-            catch (Exception e) { DisplayErrorMessage("An error has occured when trying to update Chromium Updater.\n", e); }
-            notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Update Complete!", ToolTipIcon.Info);
         }
 
         //some events
@@ -219,10 +155,10 @@ namespace ChromiumUpdaterGUI
             switch (startOnBoot)
             {
                 case true:
-                    regKey.SetValue(Constants.Other.appTitle, Constants.Paths.installPath);
+                    regKey.SetValue(Constants.Other.launcherTitle, Constants.Paths.launcherInstallPath);
                     break;
                 case false:
-                    regKey.DeleteValue(Constants.Other.appTitle, false);
+                    regKey.DeleteValue(Constants.Other.launcherTitle, false);
                     break;
             }
         }
