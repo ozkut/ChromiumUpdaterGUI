@@ -8,6 +8,8 @@
             internal const string launcherTitle = "Chromium Updater Launcher";
             internal const string errorLogFileName = "ChromiumUpdater_Error.Log";
             internal const int notificationTimeout = 3000;//this is now depricated apparently
+            internal const string currentVersion = "Current version: ";
+            internal const string newestVersion = "Newest version: ";
         }
         protected internal struct StoredVariables
         {

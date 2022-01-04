@@ -49,7 +49,6 @@ namespace ChromiumUpdaterGUI
             #if DEBUG
             const string DebugMode = "Program is currently in debug mode!";
             string DebugTitle = Constants.Other.appTitle + " Debug Mode";
-            notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, DebugTitle, DebugMode, ToolTipIcon.Warning);
             await Task.Delay(500);
             MessageBox.Show(DebugMode, DebugTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             #endif
@@ -57,9 +56,9 @@ namespace ChromiumUpdaterGUI
 
         private void AddContextItems()
         {
-            //could add a self update check thing here
-            notifyIcon.ContextMenuStrip.Items.Add("Show", null, ShowWindowClicked);
-            notifyIcon.ContextMenuStrip.Items.Add("Check for update", null, CheckUpdateClicked);
+            notifyIcon.ContextMenuStrip.Items.Add("Show main window", null, ShowWindowClicked);
+            notifyIcon.ContextMenuStrip.Items.Add("Check for Chromium updates", null, CheckUpdateClicked);
+            notifyIcon.ContextMenuStrip.Items.Add("Check for self update", null, CheckSelfUpdateClicked);
             notifyIcon.ContextMenuStrip.Items.Add("Exit", System.Drawing.SystemIcons.Error.ToBitmap(), ExitClicked);
         }
 
@@ -78,6 +77,13 @@ namespace ChromiumUpdaterGUI
         {
             ShowWindow();
             await CheckForUpdate();
+        }
+
+        private void CheckSelfUpdateClicked(object sender, EventArgs e)
+        {
+            //this is also referanced in Form.Designer
+            Process.Start(Constants.Paths.launcherInstallPath);
+            ExitProgram();
         }
 
         private static void ExitClicked(object sender, EventArgs e) => ExitProgram();
@@ -151,7 +157,7 @@ namespace ChromiumUpdaterGUI
         private static void CheckStartupStatus(bool startOnBoot)
         {
             //inside HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
-            using Microsoft.Win32.RegistryKey regKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+            using Microsoft.Win32.RegistryKey regKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
             switch (startOnBoot)
             {
                 case true:
@@ -209,14 +215,15 @@ namespace ChromiumUpdaterGUI
 
             //don't know if this is necessary or if i just just hard-code the "newest version:" and "current version:"
             //into the strings rather than adding the version numbers on top and removing the extras every time
-            if (l_CurrentVersion.Text.Length > currentVersion.Length || l_NewestVersion.Text.Length > newestVersion.Length)
+            //removing this later for a *cleaner* look and because it's probably unnecessary
+            /*if (l_CurrentVersion.Text.Length > currentVersion.Length || l_NewestVersion.Text.Length > newestVersion.Length)
             {
                 l_CurrentVersion.Text = l_CurrentVersion.Text.Trim(currentVersion.ToCharArray());
                 l_NewestVersion.Text = l_NewestVersion.Text.Trim(newestVersion.ToCharArray());
-            }
+            }*/
 
-            l_CurrentVersion.Text += currentVersion;
-            l_NewestVersion.Text += newestVersion;
+            l_CurrentVersion.Text = Constants.Other.currentVersion + currentVersion;
+            l_NewestVersion.Text = Constants.Other.newestVersion + newestVersion;
 
             if (hasInternet)
             {
@@ -340,7 +347,7 @@ namespace ChromiumUpdaterGUI
                 MessageBox.Show(upToDateText, Constants.Other.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private static void InstallUpdate(string fileLocation, bool isVisible)
+        private static async void InstallUpdate(string fileLocation, bool isVisible)
         {
             notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Installing", ToolTipIcon.Info);
 
@@ -350,7 +357,7 @@ namespace ChromiumUpdaterGUI
 
             if (isVisible)
             {
-                System.Threading.Thread.Sleep(750);
+                await Task.Delay(750);
                 MessageBox.Show("Install Complete!", Constants.Other.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
@@ -367,9 +374,17 @@ namespace ChromiumUpdaterGUI
         {
             UpdateFileAttributes(false);
             UpdateStoredVariables();
+            UpdateFileAttributes(cb_HideConfig.Checked);
         }
 
         private void cb_HideConfig_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateFileAttributes(false);
+            UpdateStoredVariables();
+            UpdateFileAttributes(cb_HideConfig.Checked);
+        }
+
+        private void cb_CheckSelfUpdate_CheckedChanged(object sender, EventArgs e)
         {
             UpdateFileAttributes(false);
             UpdateStoredVariables();
@@ -385,7 +400,7 @@ namespace ChromiumUpdaterGUI
         {
             DialogResult deleteConfigResult =
             MessageBox.Show("Are you sure you want to delete the configuration file?\n",
-            Constants.Other.appTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                            Constants.Other.appTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (deleteConfigResult == DialogResult.Yes)
             {
                 UpdateFileAttributes(false);
@@ -400,6 +415,7 @@ namespace ChromiumUpdaterGUI
             if (e.CloseReason == CloseReason.UserClosing)
             {
                 Hide();
+                WindowState = FormWindowState.Minimized;
                 e.Cancel = true;
                 notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Minimized to system tray", ToolTipIcon.None);
             }

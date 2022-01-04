@@ -9,19 +9,22 @@
     <Company>None</Company>
     <Product>Chromium Updater</Product>
     <Description>An audo-update program for the Chromium browser.</Description>
-    <Version>1.3</Version>
+    <Version>1.4</Version>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <PackageId>Chromium Updater</PackageId>
+    <AssemblyName>ChromiumUpdater</AssemblyName>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <Optimize>true</Optimize>
     <WarningLevel>1</WarningLevel>
     <DefineConstants />
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <Optimize>false</Optimize>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
 
 </Project>
