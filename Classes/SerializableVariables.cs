@@ -1,10 +1,11 @@
 ﻿namespace ChromiumUpdaterGUI
 {
-    public class SerializeableVariables
+    internal class SerializeableVariables
     {
-        public string StartOnBoot { get; set; }
-        public string CheckUpdateOnClick { get; set; }
-        public string HideConfig { get; set; }
-        public string CheckForSelfUpdate { get; set; }
+        public bool StartOnBoot { get; set; }
+        public bool CheckUpdateOnClick { get; set; }
+        public bool HideConfig { get; set; }
+        public bool CheckForSelfUpdate { get; set; }
+        public int DownloadTimeout { get; set; }
     }
 }
