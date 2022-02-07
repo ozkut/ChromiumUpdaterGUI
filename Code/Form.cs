@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
 using System.Text.Json;
-using System.Threading;
 
 //Chromium Updater made by Ozkut
 //This is the GUI version of Chromium Updater
@@ -22,7 +21,7 @@ namespace ChromiumUpdaterGUI
             Visible = true
         };
         private static readonly HttpClient client = new();
-        private static CancellationTokenSource source = new();
+        private static System.Threading.CancellationTokenSource source = new();
         
         public Form() => InitializeComponent();
 
@@ -40,9 +39,9 @@ namespace ChromiumUpdaterGUI
             if (File.Exists(Constants.Paths.tempLauncherInstallPath))
                 File.Delete(Constants.Paths.tempLauncherInstallPath);
             CheckStoredVariables();
-            await CheckForUpdate();
             SetTimeout();
             AddContextItems();
+            await CheckForUpdate();
             UpdateFileAttributes(cb_HideConfig.Checked);
             Secret(true);
             ShowDebugWarning();
@@ -83,17 +82,21 @@ namespace ChromiumUpdaterGUI
         private void UpdateProgressBar((float,float,DateTime) values)
         {
             //love you, tuples <3
-            int percentage = (int)(values.Item2 / values.Item1 * 100);
-            double downloaded = Math.Round(values.Item2 / 1000000);
-            double total = Math.Round(values.Item1 / 1000000);
+            int percentage = (int)(values.Item2 / values.Item1 * 100);//%
+            double downloaded = Math.Round(values.Item2 / 1000000);//MB
+            double total = Math.Round(values.Item1 / 1000000);//MB
 
-            TimeSpan span = DateTime.Now - values.Item3;
-            int downloadSpeed = (int)(downloaded / span.TotalSeconds * 10000);
+            TimeSpan elapsedTime = DateTime.Now - values.Item3;
+            double downloadSpeed = downloaded / elapsedTime.TotalSeconds * 1000;//KB/s
 
             progressBar.Value = percentage;
             l_Progress.Text = $" {percentage}%";
             l_DownloadAmount.Text = $"{downloaded} MB / {total} MB";
-            l_DownloadSpeed.Text = $"{downloadSpeed} KB/s";
+
+            if (downloadSpeed < 1000)
+                l_DownloadSpeed.Text = $"{downloadSpeed:0} KB/s";
+            else
+                l_DownloadSpeed.Text = $"{downloadSpeed / 1000:0.0} MB/s";
         }
 
         //some events
@@ -306,14 +309,16 @@ namespace ChromiumUpdaterGUI
         private async Task DownloadNewestVersion()
         {
             notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Downloading file", ToolTipIcon.Info);
+            
             string trimmedFileLocation = Constants.Paths.chr_InstallerFileLocation.Trim(Constants.Other.chr_InstallerFileName.ToCharArray());
             Progress<(float,float,DateTime)> progress = new(UpdateProgressBar);
+            
             ChangeDownloadUIVisibility(true);
 
             try
             {
                 using FileStream file = new(Constants.Paths.chr_InstallerFileLocation, FileMode.Create, FileAccess.Write, FileShare.None);
-                await client.DownloadAsync("https://github.com/Hibbiki/chromium-win64/releases/latest/download/mini_installer.sync.exe", file, progress, source.Token, DateTime.Now);
+                await client.DownloadAsync("https://github.com/Hibbiki/chromium-win64/releases/latest/download/mini_installer.sync.exe", file, DateTime.Now, progress, source.Token);
             }
             catch (HttpRequestException e)
             {
@@ -357,28 +362,25 @@ namespace ChromiumUpdaterGUI
             ChangeDownloadUIVisibility(false);
 
             Process[] processes = Process.GetProcessesByName("chrome");
-            switch (processes.Length > 0)
+            if (processes.Length > 0)
             {
-                case true:
-                    DialogResult browserOpenDialog =
+                DialogResult browserOpenDialog =
                     MessageBox.Show("An instance of Chromium is already running!\n" +
                                     "Would you like to close it?",
                                     Constants.Other.appTitle,
                                     MessageBoxButtons.YesNo,
                                     MessageBoxIcon.Exclamation);
 
-                    if (browserOpenDialog == DialogResult.Yes)
-                    {
-                        foreach (Process process in processes)
-                            process.Kill();
-                    }
-                    break;
+                if (browserOpenDialog == DialogResult.Yes)
+                {
+                    foreach (Process process in processes)
+                        process.Kill();
+                }
+            }
 
-                case false:
-                    await Task.Delay(500);
-                    break;
-            } 
-
+            else
+                await Task.Delay(500);
+            
             InstallUpdate(Constants.Paths.chr_InstallerFileLocation, Visible);
             DeleteTempChrInsaller();
             await CheckForUpdate();
@@ -541,7 +543,7 @@ namespace ChromiumUpdaterGUI
 
     public static class CustomExtensions//copied from stackoverflow (https://stackoverflow.com/questions/20661652/progress-bar-with-httpclient)
     {
-        public static async Task DownloadAsync(this HttpClient client, string requestUri, Stream destination, IProgress<(float,float,DateTime)> progress = null, CancellationToken cancellationToken = default, DateTime startTime = default)
+        public static async Task DownloadAsync(this HttpClient client, string requestUri, Stream destination, DateTime startTime, IProgress<(float,float,DateTime)> progress = null, System.Threading.CancellationToken cancellationToken = default)
         {
             using HttpResponseMessage response = await client.GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             long? length = response.Content.Headers.ContentLength;
@@ -555,7 +557,7 @@ namespace ChromiumUpdaterGUI
             await download.CopyToAsync(destination, 81920, finalProgress, cancellationToken);
             progress.Report((1,1,startTime));
         }
-        public static async Task CopyToAsync(this Stream source, Stream destination, int bufferSize, IProgress<long> progress = null, CancellationToken cancellationToken = default)
+        public static async Task CopyToAsync(this Stream source, Stream destination, int bufferSize, IProgress<long> progress = null, System.Threading.CancellationToken cancellationToken = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));

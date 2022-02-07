@@ -193,7 +193,7 @@ namespace ChromiumUpdaterGUI
             this.l_Progress.Name = "l_Progress";
             this.l_Progress.Size = new System.Drawing.Size(40, 17);
             this.l_Progress.TabIndex = 3;
-            this.l_Progress.Text = "100%";
+            this.l_Progress.Text = "000%";
             this.l_Progress.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.l_Progress.Visible = false;
             // 
