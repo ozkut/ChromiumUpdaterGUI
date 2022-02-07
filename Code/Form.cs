@@ -36,8 +36,6 @@ namespace ChromiumUpdaterGUI
         private async void InitilizeStuff()
         {
             Hide();
-            if (File.Exists(Constants.Paths.tempLauncherInstallPath))
-                File.Delete(Constants.Paths.tempLauncherInstallPath);
             CheckStoredVariables();
             SetTimeout();
             AddContextItems();
