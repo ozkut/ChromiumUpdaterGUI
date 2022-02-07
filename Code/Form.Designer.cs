@@ -282,7 +282,6 @@ namespace ChromiumUpdaterGUI
         private System.Windows.Forms.ProgressBar progressBar;
         private System.Windows.Forms.Label l_Progress;
         private System.Windows.Forms.Button b_CancelDownload;
-        private System.Windows.Forms.Label l_DownloadedAmount;
         private System.Windows.Forms.Label l_DownloadAmount;
         private System.Windows.Forms.Label l_DownloadSpeed;
     }
