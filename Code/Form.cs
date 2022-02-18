@@ -91,10 +91,13 @@ namespace ChromiumUpdaterGUI
             l_Progress.Text = $" {percentage}%";
             l_DownloadAmount.Text = $"{downloaded} MB / {total} MB";
 
-            if (downloadSpeed < 1000)
-                l_DownloadSpeed.Text = $"{downloadSpeed:0} KB/s";
-            else
-                l_DownloadSpeed.Text = $"{downloadSpeed / 1000:0.0} MB/s";
+            if (downloadSpeed % 2 == 1)
+            {
+                if (downloadSpeed < 1000)
+                    l_DownloadSpeed.Text = $"{downloadSpeed:0} KB/s";
+                else
+                    l_DownloadSpeed.Text = $"{downloadSpeed / 1000:0.0} MB/s";
+            }
         }
 
         //some events
@@ -512,6 +515,8 @@ namespace ChromiumUpdaterGUI
 
                 client.Dispose();
                 notifyIcon.Dispose();
+                source.Cancel();
+                source.Dispose();
                 File.WriteAllText(errorLogLocation, e.ToString());
                 Environment.Exit(1);
             }
