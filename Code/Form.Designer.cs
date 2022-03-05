@@ -46,12 +46,14 @@ namespace ChromiumUpdaterGUI
             this.b_CancelDownload = new System.Windows.Forms.Button();
             this.l_DownloadAmount = new System.Windows.Forms.Label();
             this.l_DownloadSpeed = new System.Windows.Forms.Label();
+            this.cb_EnableRegularChecks = new System.Windows.Forms.CheckBox();
+            this.comboBox_RegularUpdateInterval = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)(this.numList)).BeginInit();
             this.SuspendLayout();
             // 
             // b_CheckUpdate
             // 
-            this.b_CheckUpdate.Location = new System.Drawing.Point(159, 141);
+            this.b_CheckUpdate.Location = new System.Drawing.Point(159, 175);
             this.b_CheckUpdate.Name = "b_CheckUpdate";
             this.b_CheckUpdate.Size = new System.Drawing.Size(186, 25);
             this.b_CheckUpdate.TabIndex = 6;
@@ -90,7 +92,7 @@ namespace ChromiumUpdaterGUI
             // 
             // b_Exit
             // 
-            this.b_Exit.Location = new System.Drawing.Point(351, 141);
+            this.b_Exit.Location = new System.Drawing.Point(351, 175);
             this.b_Exit.Name = "b_Exit";
             this.b_Exit.Size = new System.Drawing.Size(79, 25);
             this.b_Exit.TabIndex = 0;
@@ -126,7 +128,7 @@ namespace ChromiumUpdaterGUI
             // 
             // b_DeleteConfig
             // 
-            this.b_DeleteConfig.Location = new System.Drawing.Point(335, 110);
+            this.b_DeleteConfig.Location = new System.Drawing.Point(335, 144);
             this.b_DeleteConfig.Name = "b_DeleteConfig";
             this.b_DeleteConfig.Size = new System.Drawing.Size(95, 25);
             this.b_DeleteConfig.TabIndex = 8;
@@ -149,7 +151,7 @@ namespace ChromiumUpdaterGUI
             // 
             // b_SelfUpdateCheck
             // 
-            this.b_SelfUpdateCheck.Location = new System.Drawing.Point(12, 141);
+            this.b_SelfUpdateCheck.Location = new System.Drawing.Point(12, 175);
             this.b_SelfUpdateCheck.Name = "b_SelfUpdateCheck";
             this.b_SelfUpdateCheck.Size = new System.Drawing.Size(141, 25);
             this.b_SelfUpdateCheck.TabIndex = 5;
@@ -159,7 +161,7 @@ namespace ChromiumUpdaterGUI
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 117);
+            this.label1.Location = new System.Drawing.Point(12, 151);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(58, 17);
             this.label1.TabIndex = 5;
@@ -168,7 +170,7 @@ namespace ChromiumUpdaterGUI
             // numList
             // 
             this.numList.InterceptArrowKeys = false;
-            this.numList.Location = new System.Drawing.Point(66, 113);
+            this.numList.Location = new System.Drawing.Point(66, 147);
             this.numList.Name = "numList";
             this.numList.Size = new System.Drawing.Size(27, 25);
             this.numList.TabIndex = 7;
@@ -199,7 +201,7 @@ namespace ChromiumUpdaterGUI
             // 
             // b_CancelDownload
             // 
-            this.b_CancelDownload.Location = new System.Drawing.Point(257, 110);
+            this.b_CancelDownload.Location = new System.Drawing.Point(257, 144);
             this.b_CancelDownload.Name = "b_CancelDownload";
             this.b_CancelDownload.Size = new System.Drawing.Size(72, 25);
             this.b_CancelDownload.TabIndex = 9;
@@ -228,11 +230,37 @@ namespace ChromiumUpdaterGUI
             this.l_DownloadSpeed.Text = "0000 KB/s";
             this.l_DownloadSpeed.Visible = false;
             // 
+            // cb_EnableRegularChecks
+            // 
+            this.cb_EnableRegularChecks.AutoSize = true;
+            this.cb_EnableRegularChecks.Checked = true;
+            this.cb_EnableRegularChecks.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.cb_EnableRegularChecks.Location = new System.Drawing.Point(13, 121);
+            this.cb_EnableRegularChecks.Name = "cb_EnableRegularChecks";
+            this.cb_EnableRegularChecks.Size = new System.Drawing.Size(188, 21);
+            this.cb_EnableRegularChecks.TabIndex = 12;
+            this.cb_EnableRegularChecks.Text = "Check for updates regularly";
+            this.cb_EnableRegularChecks.UseVisualStyleBackColor = true;
+            this.cb_EnableRegularChecks.CheckedChanged += new System.EventHandler(this.cb_EnableRegularChecks_CheckedChanged);
+            // 
+            // comboBox_RegularUpdateInterval
+            // 
+            this.comboBox_RegularUpdateInterval.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBox_RegularUpdateInterval.FormattingEnabled = true;
+            this.comboBox_RegularUpdateInterval.Location = new System.Drawing.Point(197, 119);
+            this.comboBox_RegularUpdateInterval.MaxDropDownItems = 5;
+            this.comboBox_RegularUpdateInterval.Name = "comboBox_RegularUpdateInterval";
+            this.comboBox_RegularUpdateInterval.Size = new System.Drawing.Size(44, 25);
+            this.comboBox_RegularUpdateInterval.TabIndex = 13;
+            this.comboBox_RegularUpdateInterval.SelectedIndexChanged += new System.EventHandler(this.comboBox_RegularUpdateInterval_SelectedIndexChanged);
+            // 
             // Form
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(442, 178);
+            this.ClientSize = new System.Drawing.Size(442, 212);
+            this.Controls.Add(this.comboBox_RegularUpdateInterval);
+            this.Controls.Add(this.cb_EnableRegularChecks);
             this.Controls.Add(this.l_DownloadSpeed);
             this.Controls.Add(this.l_DownloadAmount);
             this.Controls.Add(this.b_CancelDownload);
@@ -284,6 +312,8 @@ namespace ChromiumUpdaterGUI
         private System.Windows.Forms.Button b_CancelDownload;
         private System.Windows.Forms.Label l_DownloadAmount;
         private System.Windows.Forms.Label l_DownloadSpeed;
+        private System.Windows.Forms.CheckBox cb_EnableRegularChecks;
+        private System.Windows.Forms.ComboBox comboBox_RegularUpdateInterval;
     }
 }
 

@@ -22,6 +22,8 @@ namespace ChromiumUpdaterGUI
         };
         private static readonly HttpClient client = new();
         private static System.Threading.CancellationTokenSource source = new();
+        private static System.Timers.Timer timer;
+        private static bool settingUp;
         
         public Form() => InitializeComponent();
 
@@ -36,13 +38,17 @@ namespace ChromiumUpdaterGUI
         private async void InitilizeStuff()
         {
             Hide();
+            settingUp = true;
+            SetRegularUpdateInterval(Constants.Other.maxUpdateCheckInterval);
             CheckStoredVariables();
             SetTimeout();
             AddContextItems();
             await CheckForUpdate();
+            CheckForUpdatesRegularly(cb_EnableRegularChecks.Checked);
             UpdateFileAttributes(cb_HideConfig.Checked);
             Secret(true);
             ShowDebugWarning();
+            settingUp = false;
         }
 
         private static async void ShowDebugWarning()
@@ -55,11 +61,55 @@ namespace ChromiumUpdaterGUI
 
         private void AddContextItems()
         {
-            notifyIcon.ContextMenuStrip.Items.Add("Show main window", null, ShowWindowClicked);
-            notifyIcon.ContextMenuStrip.Items.Add("Check for Chromium updates", null, CheckUpdateClicked);
-            notifyIcon.ContextMenuStrip.Items.Add("Check for self update", null, CheckSelfUpdateClicked);
-            notifyIcon.ContextMenuStrip.Items.Add("Exit", System.Drawing.SystemIcons.Error.ToBitmap(), ExitClicked);
+            System.Collections.Generic.List<(string, System.Drawing.Image, EventHandler)> itemsList = new() 
+            {
+                ("Show main window", null, ShowWindowClicked),
+                ("Check for Chromium updates", null, CheckUpdateClicked),
+                ("Check for self update", null, CheckSelfUpdateClicked),
+                ("Exit", System.Drawing.SystemIcons.Error.ToBitmap(), ExitClicked)
+            };
+            foreach ((string, System.Drawing.Image, EventHandler) items in itemsList)
+                notifyIcon.ContextMenuStrip.Items.Add(items.Item1, items.Item2, items.Item3);
         }
+
+        private void SetRegularUpdateInterval(int maxTime)
+        {
+            comboBox_RegularUpdateInterval.MaxDropDownItems = maxTime;
+            for (int i = 1; i < maxTime + 1; i++)
+                comboBox_RegularUpdateInterval.Items.Add(i);
+            comboBox_RegularUpdateInterval.SelectedItem = maxTime;
+        }
+
+        private void CheckForUpdatesRegularly(bool enabled)
+        {
+            if (enabled)
+            {
+                cb_EnableRegularChecks.Text = "Check for updates regularly             minute(s)";
+                if (timer != null && timer.Enabled == true)
+                {
+                    timer.Stop();
+                    timer.Dispose();
+                }
+                timer = new();
+                timer.Enabled = enabled;
+                timer.Interval = TimeSpan.FromMinutes((int)comboBox_RegularUpdateInterval.SelectedItem).TotalMilliseconds;
+                timer.Start();
+                timer.Elapsed += InvokeCheckUpdate;
+            }
+
+            else
+            {
+                cb_EnableRegularChecks.Text = "Check for updates regularly";
+                if (timer != null)
+                {
+                    timer.Enabled = enabled;
+                    timer.Stop();
+                    timer.Dispose();
+                }
+            }
+        }
+
+        private async void InvokeCheckUpdate(object sender, System.Timers.ElapsedEventArgs e) => await CheckForUpdate();
 
         private void SetTimeout()
         {
@@ -130,8 +180,8 @@ namespace ChromiumUpdaterGUI
         {
             UpdateFileAttributes(false);
 
-            bool startOnBootState, checkUpdateOnClickState, hideConfigState, checkSelfUpdate;
-            int timeOut;
+            bool startOnBootState, checkUpdateOnClickState, hideConfigState, checkSelfUpdate, checkUpdatesRegularly;
+            int timeOut, UpdateCheckInterval;
             while (true)
             {
                 try
@@ -142,6 +192,8 @@ namespace ChromiumUpdaterGUI
                     hideConfigState = vars.HideConfig;
                     checkSelfUpdate = vars.CheckForSelfUpdate;
                     timeOut = vars.DownloadTimeout;
+                    checkUpdatesRegularly = vars.CheckUpdateRegularly;
+                    UpdateCheckInterval = vars.UpdateCheckInterval;
                     break;
                 }
                 catch { UpdateStoredVariables(); }
@@ -152,21 +204,20 @@ namespace ChromiumUpdaterGUI
             cb_HideConfig.Checked = hideConfigState;
             cb_CheckSelfUpdate.Checked = checkSelfUpdate;
             numList.Value = timeOut;
+            cb_EnableRegularChecks.Checked = checkUpdatesRegularly;
+            comboBox_RegularUpdateInterval.SelectedItem = UpdateCheckInterval;
 
             UpdateFileAttributes(cb_HideConfig.Checked);
         }
 
         private void CheckStoredVariables()
         {
-            switch (File.Exists(Constants.StoredVariables.configPath))
-            {
-                case true:
-                    UpdateUIFromConfig();
-                    break;
-                case false:
-                    Directory.CreateDirectory(Constants.StoredVariables.directory);
-                    UpdateStoredVariables();
-                    break;
+            if (File.Exists(Constants.StoredVariables.configPath))
+                UpdateUIFromConfig();     
+            else
+            { 
+                Directory.CreateDirectory(Constants.StoredVariables.directory);
+                UpdateStoredVariables();
             }
         }
 
@@ -178,7 +229,9 @@ namespace ChromiumUpdaterGUI
                 CheckUpdateOnClick = cb_CheckUpateOnClick.Checked,
                 HideConfig = cb_HideConfig.Checked,
                 CheckForSelfUpdate = cb_CheckSelfUpdate.Checked,
-                DownloadTimeout = (int)numList.Value
+                DownloadTimeout = (int)numList.Value,
+                CheckUpdateRegularly = cb_EnableRegularChecks.Checked,
+                UpdateCheckInterval = (int)comboBox_RegularUpdateInterval.SelectedItem
             };
             await File.WriteAllTextAsync(Constants.StoredVariables.configPath, JsonSerializer.Serialize(vars, new JsonSerializerOptions { WriteIndented = true }));
             UpdateFileAttributes(cb_HideConfig.Checked);
@@ -189,15 +242,10 @@ namespace ChromiumUpdaterGUI
             if (File.Exists(Constants.StoredVariables.configPath))
             {
                 FileAttributes attributes = File.GetAttributes(Constants.StoredVariables.configPath);
-                switch (hideFile)
-                {
-                    case true:
-                        File.SetAttributes(Constants.StoredVariables.configPath, attributes | FileAttributes.Hidden);
-                        break;
-                    case false:
-                        File.SetAttributes(Constants.StoredVariables.configPath, attributes &= ~FileAttributes.Hidden);
-                        break;
-                }
+                if (hideFile)
+                    File.SetAttributes(Constants.StoredVariables.configPath, attributes | FileAttributes.Hidden);
+                else
+                    File.SetAttributes(Constants.StoredVariables.configPath, attributes &= ~FileAttributes.Hidden);
             }
         }
 
@@ -276,33 +324,26 @@ namespace ChromiumUpdaterGUI
 
             if (hasInternet)
             {
-                switch (currentVersion == newestVersion)
+                if (currentVersion == newestVersion)
+                    IsUpToDate(Visible);
+                else
                 {
-                    case true:
-                        IsUpToDate(Visible);
-                        break;
+                    if (!Visible)
+                        notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "An update is available!", ToolTipIcon.None);
 
-                    case false:
-                        switch (Visible)
-                        {
-                            case false:
-                                notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "An update is available!", ToolTipIcon.None);
-                                break;
+                    else
+                    {
+                        DialogResult updateAvailableDialog =
+                        MessageBox.Show($"Current Version: {currentVersion}\n" +
+                                        $"Newest version available: {newestVersion}\n" +
+                                        "Would you like to update?",
+                                        Constants.Other.appTitle,
+                                        MessageBoxButtons.YesNo,
+                                        MessageBoxIcon.Question);
 
-                            case true:
-                                DialogResult updateAvailableDialog =
-                                MessageBox.Show($"Current Version: {currentVersion}\n" +
-                                                $"Newest version available: {newestVersion}\n" +
-                                                "Would you like to update?",
-                                                Constants.Other.appTitle,
-                                                MessageBoxButtons.YesNo,
-                                                MessageBoxIcon.Question);
-
-                                if (updateAvailableDialog == DialogResult.Yes)
-                                    await DownloadNewestVersion();
-                                break;
-                        }
-                        break;
+                        if (updateAvailableDialog == DialogResult.Yes)
+                            await DownloadNewestVersion();
+                    }
                 }
             }
         }
@@ -333,21 +374,6 @@ namespace ChromiumUpdaterGUI
                 DeleteTempChrInsaller();
                 return;
             }
-            catch (UnauthorizedAccessException e)
-            {
-                DisplayErrorMessage("The program does not have the proper permissions to write to " +
-                                    $"'{trimmedFileLocation}'\n" +
-                                    "Please check if the program has the correct permissions to write to the given directory.", e);
-            }
-            catch (DirectoryNotFoundException e)
-            {
-                DisplayErrorMessage($"The directory '{trimmedFileLocation}' could not be found.\n" +
-                                    "Please make sure that the directory exists.", e);
-            }
-            catch (PathTooLongException e)
-            {
-                DisplayErrorMessage($"The path '{Constants.Paths.chr_InstallerFileLocation}' is too long.\n", e);
-            }
             catch (IOException e)
             {
                 DisplayErrorMessage("An error occured when trying to write the upadte file to " +
@@ -356,8 +382,7 @@ namespace ChromiumUpdaterGUI
             }
             catch (Exception e)
             {
-                DisplayErrorMessage("An unknown error has occured.\n" +
-                                    e.Message, e);
+                DisplayErrorMessage("An unknown error has occured.\n" + e.Message, e);
             }
 
             ChangeDownloadUIVisibility(false);
@@ -390,15 +415,8 @@ namespace ChromiumUpdaterGUI
         private static void IsUpToDate(bool isVisible)
         {
             const string upToDateText = "Chromium is up-to-date!";
-            switch (isVisible)
-            {
-                case false:
-                    notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, upToDateText, ToolTipIcon.None);
-                    break;
-                case true:
-                    MessageBox.Show(upToDateText, Constants.Other.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    break;
-            }      
+            if (isVisible)
+                MessageBox.Show(upToDateText, Constants.Other.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);     
         }
 
         private static void InstallUpdate(string fileLocation, bool isVisible)
@@ -463,6 +481,15 @@ namespace ChromiumUpdaterGUI
             UpdateFileAttributes(cb_HideConfig.Checked);
         }
 
+        private void cb_EnableRegularChecks_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateFileAttributes(false);
+            UpdateStoredVariables();
+            comboBox_RegularUpdateInterval.Visible = cb_EnableRegularChecks.Checked;
+            CheckForUpdatesRegularly(cb_EnableRegularChecks.Checked);
+            UpdateFileAttributes(cb_HideConfig.Checked);
+        }
+
         //buttons
         private async void b_CheckUpdate_Click(object sender, EventArgs e) => await CheckForUpdate();
 
@@ -482,6 +509,18 @@ namespace ChromiumUpdaterGUI
         }
 
         private void b_CancelDownload_Click(object sender, EventArgs e) => source.Cancel();
+
+        //other
+        private void comboBox_RegularUpdateInterval_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (!settingUp)
+            {
+                UpdateFileAttributes(false);
+                UpdateStoredVariables();
+                UpdateFileAttributes(cb_HideConfig.Checked);
+                CheckForUpdatesRegularly(cb_EnableRegularChecks.Checked);
+            }
+        }
 
         //program end stuff
         private void Form_Closing(object sender, FormClosingEventArgs e)
@@ -529,6 +568,7 @@ namespace ChromiumUpdaterGUI
             client.Dispose();
             source.Cancel();
             source.Dispose();
+            timer.Dispose();
             Environment.Exit(0);
         }
 

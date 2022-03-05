@@ -7,5 +7,7 @@
         public bool HideConfig { get; set; }
         public bool CheckForSelfUpdate { get; set; }
         public int DownloadTimeout { get; set; }
+        public bool CheckUpdateRegularly { get; set; }
+        public int UpdateCheckInterval { get; set; }
     }
 }

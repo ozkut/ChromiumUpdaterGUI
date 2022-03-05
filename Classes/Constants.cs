@@ -16,6 +16,8 @@ namespace ChromiumUpdaterGUI
             internal const string newestVersion = "Newest version: ";
 
             internal const string chr_InstallerFileName = "mini_installer.sync.exe";
+
+            internal const int maxUpdateCheckInterval = 5;
         }
         protected internal struct StoredVariables
         {
@@ -34,7 +36,7 @@ namespace ChromiumUpdaterGUI
             internal readonly static string tempLauncherInstallPath = Path.Combine(StoredVariables.directory, "LauncherTemp.exe");
             
             internal readonly static string currentPath = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
-            internal readonly static string chr_InstallerFileLocation = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop), Other.chr_InstallerFileName);
+            internal readonly static string chr_InstallerFileLocation = Path.Combine(Path.GetTempPath(), Other.chr_InstallerFileName);
         }
     }
 }
