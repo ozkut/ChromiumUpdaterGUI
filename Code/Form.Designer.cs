@@ -48,12 +48,14 @@ namespace ChromiumUpdaterGUI
             this.l_DownloadSpeed = new System.Windows.Forms.Label();
             this.cb_EnableRegularChecks = new System.Windows.Forms.CheckBox();
             this.comboBox_RegularUpdateInterval = new System.Windows.Forms.ComboBox();
+            this.cb_ShowUpToDateNotif = new System.Windows.Forms.CheckBox();
+            this.b_OpenInstallFolder = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.numList)).BeginInit();
             this.SuspendLayout();
             // 
             // b_CheckUpdate
             // 
-            this.b_CheckUpdate.Location = new System.Drawing.Point(159, 175);
+            this.b_CheckUpdate.Location = new System.Drawing.Point(159, 199);
             this.b_CheckUpdate.Name = "b_CheckUpdate";
             this.b_CheckUpdate.Size = new System.Drawing.Size(186, 25);
             this.b_CheckUpdate.TabIndex = 6;
@@ -92,7 +94,7 @@ namespace ChromiumUpdaterGUI
             // 
             // b_Exit
             // 
-            this.b_Exit.Location = new System.Drawing.Point(351, 175);
+            this.b_Exit.Location = new System.Drawing.Point(351, 199);
             this.b_Exit.Name = "b_Exit";
             this.b_Exit.Size = new System.Drawing.Size(79, 25);
             this.b_Exit.TabIndex = 0;
@@ -128,7 +130,7 @@ namespace ChromiumUpdaterGUI
             // 
             // b_DeleteConfig
             // 
-            this.b_DeleteConfig.Location = new System.Drawing.Point(335, 144);
+            this.b_DeleteConfig.Location = new System.Drawing.Point(335, 168);
             this.b_DeleteConfig.Name = "b_DeleteConfig";
             this.b_DeleteConfig.Size = new System.Drawing.Size(95, 25);
             this.b_DeleteConfig.TabIndex = 8;
@@ -151,7 +153,7 @@ namespace ChromiumUpdaterGUI
             // 
             // b_SelfUpdateCheck
             // 
-            this.b_SelfUpdateCheck.Location = new System.Drawing.Point(12, 175);
+            this.b_SelfUpdateCheck.Location = new System.Drawing.Point(12, 199);
             this.b_SelfUpdateCheck.Name = "b_SelfUpdateCheck";
             this.b_SelfUpdateCheck.Size = new System.Drawing.Size(141, 25);
             this.b_SelfUpdateCheck.TabIndex = 5;
@@ -161,7 +163,7 @@ namespace ChromiumUpdaterGUI
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 151);
+            this.label1.Location = new System.Drawing.Point(12, 175);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(58, 17);
             this.label1.TabIndex = 5;
@@ -170,7 +172,7 @@ namespace ChromiumUpdaterGUI
             // numList
             // 
             this.numList.InterceptArrowKeys = false;
-            this.numList.Location = new System.Drawing.Point(66, 147);
+            this.numList.Location = new System.Drawing.Point(66, 171);
             this.numList.Name = "numList";
             this.numList.Size = new System.Drawing.Size(27, 25);
             this.numList.TabIndex = 7;
@@ -201,11 +203,11 @@ namespace ChromiumUpdaterGUI
             // 
             // b_CancelDownload
             // 
-            this.b_CancelDownload.Location = new System.Drawing.Point(257, 144);
+            this.b_CancelDownload.Location = new System.Drawing.Point(304, 99);
             this.b_CancelDownload.Name = "b_CancelDownload";
-            this.b_CancelDownload.Size = new System.Drawing.Size(72, 25);
+            this.b_CancelDownload.Size = new System.Drawing.Size(126, 25);
             this.b_CancelDownload.TabIndex = 9;
-            this.b_CancelDownload.Text = "Cancel";
+            this.b_CancelDownload.Text = "Cancel download";
             this.b_CancelDownload.UseVisualStyleBackColor = true;
             this.b_CancelDownload.Visible = false;
             this.b_CancelDownload.Click += new System.EventHandler(this.b_CancelDownload_Click);
@@ -235,11 +237,11 @@ namespace ChromiumUpdaterGUI
             this.cb_EnableRegularChecks.AutoSize = true;
             this.cb_EnableRegularChecks.Checked = true;
             this.cb_EnableRegularChecks.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.cb_EnableRegularChecks.Location = new System.Drawing.Point(13, 121);
+            this.cb_EnableRegularChecks.Location = new System.Drawing.Point(12, 121);
             this.cb_EnableRegularChecks.Name = "cb_EnableRegularChecks";
-            this.cb_EnableRegularChecks.Size = new System.Drawing.Size(188, 21);
+            this.cb_EnableRegularChecks.Size = new System.Drawing.Size(293, 21);
             this.cb_EnableRegularChecks.TabIndex = 12;
-            this.cb_EnableRegularChecks.Text = "Check for updates regularly";
+            this.cb_EnableRegularChecks.Text = "Check for updates regularly             minute(s)";
             this.cb_EnableRegularChecks.UseVisualStyleBackColor = true;
             this.cb_EnableRegularChecks.CheckedChanged += new System.EventHandler(this.cb_EnableRegularChecks_CheckedChanged);
             // 
@@ -254,11 +256,34 @@ namespace ChromiumUpdaterGUI
             this.comboBox_RegularUpdateInterval.TabIndex = 13;
             this.comboBox_RegularUpdateInterval.SelectedIndexChanged += new System.EventHandler(this.comboBox_RegularUpdateInterval_SelectedIndexChanged);
             // 
+            // cb_ShowUpToDateNotif
+            // 
+            this.cb_ShowUpToDateNotif.AutoSize = true;
+            this.cb_ShowUpToDateNotif.Location = new System.Drawing.Point(12, 148);
+            this.cb_ShowUpToDateNotif.Name = "cb_ShowUpToDateNotif";
+            this.cb_ShowUpToDateNotif.Size = new System.Drawing.Size(304, 21);
+            this.cb_ShowUpToDateNotif.TabIndex = 14;
+            this.cb_ShowUpToDateNotif.Text = "Show notification when Chromium is up-to-date";
+            this.cb_ShowUpToDateNotif.UseVisualStyleBackColor = true;
+            this.cb_ShowUpToDateNotif.CheckedChanged += new System.EventHandler(this.cb_ShowUpToDateNotif_CheckedChanged);
+            // 
+            // b_OpenInstallFolder
+            // 
+            this.b_OpenInstallFolder.Location = new System.Drawing.Point(197, 168);
+            this.b_OpenInstallFolder.Name = "b_OpenInstallFolder";
+            this.b_OpenInstallFolder.Size = new System.Drawing.Size(135, 24);
+            this.b_OpenInstallFolder.TabIndex = 15;
+            this.b_OpenInstallFolder.Text = "Open install folder";
+            this.b_OpenInstallFolder.UseVisualStyleBackColor = true;
+            this.b_OpenInstallFolder.Click += new System.EventHandler(this.b_OpenInstallFolder_Click);
+            // 
             // Form
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(442, 212);
+            this.ClientSize = new System.Drawing.Size(442, 231);
+            this.Controls.Add(this.b_OpenInstallFolder);
+            this.Controls.Add(this.cb_ShowUpToDateNotif);
             this.Controls.Add(this.comboBox_RegularUpdateInterval);
             this.Controls.Add(this.cb_EnableRegularChecks);
             this.Controls.Add(this.l_DownloadSpeed);
@@ -314,6 +339,8 @@ namespace ChromiumUpdaterGUI
         private System.Windows.Forms.Label l_DownloadSpeed;
         private System.Windows.Forms.CheckBox cb_EnableRegularChecks;
         private System.Windows.Forms.ComboBox comboBox_RegularUpdateInterval;
+        private System.Windows.Forms.CheckBox cb_ShowUpToDateNotif;
+        private System.Windows.Forms.Button b_OpenInstallFolder;
     }
 }
 

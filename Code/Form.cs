@@ -21,9 +21,9 @@ namespace ChromiumUpdaterGUI
             Visible = true
         };
         private static readonly HttpClient client = new();
-        private static System.Threading.CancellationTokenSource source = new();
+        private static System.Threading.CancellationTokenSource source;
         private static System.Timers.Timer timer;
-        private static bool settingUp;
+        private static bool? settingUp;
         
         public Form() => InitializeComponent();
 
@@ -46,38 +46,44 @@ namespace ChromiumUpdaterGUI
             await CheckForUpdate();
             CheckForUpdatesRegularly(cb_EnableRegularChecks.Checked);
             UpdateFileAttributes(cb_HideConfig.Checked);
+            CheckForErrorLog();
             Secret(true);
             ShowDebugWarning();
             settingUp = false;
         }
 
-        private static async void ShowDebugWarning()
+        private static void ShowDebugWarning()
         {
             #if DEBUG
-            await Task.Delay(500);
+            Task.Delay(500);
             MessageBox.Show("Program is currently in debug mode!", Constants.Other.appTitle + " Debug Mode", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            #else
+            return;
             #endif
         }
 
         private void AddContextItems()
         {
-            System.Collections.Generic.List<(string, System.Drawing.Image, EventHandler)> itemsList = new() 
+            System.Collections.Generic.List<(string, System.Drawing.Image, EventHandler)> groupList = new() 
             {
                 ("Show main window", null, ShowWindowClicked),
                 ("Check for Chromium updates", null, CheckUpdateClicked),
                 ("Check for self update", null, CheckSelfUpdateClicked),
                 ("Exit", System.Drawing.SystemIcons.Error.ToBitmap(), ExitClicked)
             };
-            foreach ((string, System.Drawing.Image, EventHandler) items in itemsList)
-                notifyIcon.ContextMenuStrip.Items.Add(items.Item1, items.Item2, items.Item3);
+            foreach ((string, System.Drawing.Image, EventHandler) group in groupList)
+                notifyIcon.ContextMenuStrip.Items.Add(group.Item1, group.Item2, group.Item3);
         }
 
         private void SetRegularUpdateInterval(int maxTime)
         {
-            comboBox_RegularUpdateInterval.MaxDropDownItems = maxTime;
-            for (int i = 1; i < maxTime + 1; i++)
-                comboBox_RegularUpdateInterval.Items.Add(i);
-            comboBox_RegularUpdateInterval.SelectedItem = maxTime;
+            if (cb_EnableRegularChecks.Checked)
+            {
+                comboBox_RegularUpdateInterval.MaxDropDownItems = maxTime;
+                for (int i = 1; i < maxTime + 1; i++)
+                    comboBox_RegularUpdateInterval.Items.Add(i);
+                comboBox_RegularUpdateInterval.SelectedItem = maxTime;
+            }
         }
 
         private void CheckForUpdatesRegularly(bool enabled)
@@ -96,7 +102,6 @@ namespace ChromiumUpdaterGUI
                 timer.Start();
                 timer.Elapsed += InvokeCheckUpdate;
             }
-
             else
             {
                 cb_EnableRegularChecks.Text = "Check for updates regularly";
@@ -117,6 +122,23 @@ namespace ChromiumUpdaterGUI
             numList.Maximum = 5;
             numList.Minimum = 1;
             client.Timeout = TimeSpan.FromMinutes((double)numList.Value);
+        }
+
+        private static void CheckForErrorLog()
+        {
+            string errorLogPath = Path.Combine(Constants.StoredVariables.directory, Constants.Other.errorLogFileName);
+            if (File.Exists(errorLogPath))
+            {
+                DialogResult openResult = MessageBox.Show("An error log from a previous crash has been found.\n" +
+                                                          "Would you like to open it?",
+                                                          Constants.Other.appTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (openResult == DialogResult.Yes)
+                    Process.Start("notepad", errorLogPath).WaitForExit();
+                DialogResult deleteResult = MessageBox.Show("Would you like to delete the error log?",
+                                                            Constants.Other.appTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (deleteResult == DialogResult.Yes)
+                    File.Delete(errorLogPath);
+            }
         }
 
         private async void ShowWindow()
@@ -163,10 +185,10 @@ namespace ChromiumUpdaterGUI
         {
             //this is also referanced(idk how to spell) in Form.Designer
             Process.Start(Constants.Paths.launcherInstallPath);
-            ExitProgram();
+            ExitProgram(0);
         }
 
-        private static void ExitClicked(object sender, EventArgs e) => ExitProgram();
+        private static void ExitClicked(object sender, EventArgs e) => ExitProgram(0);
 
         private void TimeoutChanged(object sender, EventArgs e) 
         {
@@ -180,7 +202,7 @@ namespace ChromiumUpdaterGUI
         {
             UpdateFileAttributes(false);
 
-            bool startOnBootState, checkUpdateOnClickState, hideConfigState, checkSelfUpdate, checkUpdatesRegularly;
+            bool startOnBootState, checkUpdateOnClickState, hideConfigState, checkSelfUpdate, checkUpdatesRegularly, showNotifWhenUpToDate;
             int timeOut, UpdateCheckInterval;
             while (true)
             {
@@ -194,6 +216,7 @@ namespace ChromiumUpdaterGUI
                     timeOut = vars.DownloadTimeout;
                     checkUpdatesRegularly = vars.CheckUpdateRegularly;
                     UpdateCheckInterval = vars.UpdateCheckInterval;
+                    showNotifWhenUpToDate = vars.ShowNotifWhanUpToDate;
                     break;
                 }
                 catch { UpdateStoredVariables(); }
@@ -206,6 +229,7 @@ namespace ChromiumUpdaterGUI
             numList.Value = timeOut;
             cb_EnableRegularChecks.Checked = checkUpdatesRegularly;
             comboBox_RegularUpdateInterval.SelectedItem = UpdateCheckInterval;
+            cb_ShowUpToDateNotif.Checked = showNotifWhenUpToDate;
 
             UpdateFileAttributes(cb_HideConfig.Checked);
         }
@@ -231,7 +255,8 @@ namespace ChromiumUpdaterGUI
                 CheckForSelfUpdate = cb_CheckSelfUpdate.Checked,
                 DownloadTimeout = (int)numList.Value,
                 CheckUpdateRegularly = cb_EnableRegularChecks.Checked,
-                UpdateCheckInterval = (int)comboBox_RegularUpdateInterval.SelectedItem
+                UpdateCheckInterval = (int)comboBox_RegularUpdateInterval.SelectedItem,
+                ShowNotifWhanUpToDate = cb_ShowUpToDateNotif.Checked
             };
             await File.WriteAllTextAsync(Constants.StoredVariables.configPath, JsonSerializer.Serialize(vars, new JsonSerializerOptions { WriteIndented = true }));
             UpdateFileAttributes(cb_HideConfig.Checked);
@@ -287,7 +312,7 @@ namespace ChromiumUpdaterGUI
             catch (FileNotFoundException)
             {
                 MessageBox.Show($"A valid install of Chromium could not be found at '{Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + "\\Chromium"}'\n" +
-                                "Please make sure that Chromium is installed at thet location.\n",
+                                "Please make sure that Chromium is installed at thet location.",
                                 Constants.Other.appTitle,
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Error);
@@ -306,8 +331,7 @@ namespace ChromiumUpdaterGUI
             }
             catch (Exception e)
             {
-                DisplayErrorMessage("An unknown error has occured.\n" +
-                                    e.Message, e);
+                DisplayErrorMessage("An unknown error has occured.\n" + e.Message, e);
             }
 
             //don't know if this is necessary or if i just just hard-code the "newest version:" and "current version:"
@@ -325,12 +349,11 @@ namespace ChromiumUpdaterGUI
             if (hasInternet)
             {
                 if (currentVersion == newestVersion)
-                    IsUpToDate(Visible);
+                    IsUpToDate(Visible, cb_ShowUpToDateNotif.Checked);
                 else
                 {
                     if (!Visible)
                         notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "An update is available!", ToolTipIcon.None);
-
                     else
                     {
                         DialogResult updateAvailableDialog =
@@ -351,7 +374,8 @@ namespace ChromiumUpdaterGUI
         private async Task DownloadNewestVersion()
         {
             notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Downloading file", ToolTipIcon.Info);
-            
+
+            source = new();
             string trimmedFileLocation = Constants.Paths.chr_InstallerFileLocation.Trim(Constants.Other.chr_InstallerFileName.ToCharArray());
             Progress<(float,float,DateTime)> progress = new(UpdateProgressBar);
             
@@ -364,21 +388,21 @@ namespace ChromiumUpdaterGUI
             }
             catch (HttpRequestException e)
             {
-                DisplayErrorMessage("An HTTP error has occured when trying to download the latest version of Chromium.\n" +
+                DisplayErrorMessage("A connection error has occured when trying to download the latest version of Chromium.\n" +
                                     "Please check your internet connection.", e);
             }
             catch (TaskCanceledException e)
             {
                 ChangeDownloadUIVisibility(false);
-                DisplayErrorMessage("The download operation was cancelled.", e);
+                DisplayErrorMessage("The download operation has been cancelled.", e);
                 DeleteTempChrInsaller();
                 return;
             }
             catch (IOException e)
             {
-                DisplayErrorMessage("An error occured when trying to write the upadte file to " +
+                DisplayErrorMessage("An error occured when trying to write the installer file to " +
                                     $"'{trimmedFileLocation}'\n" +
-                                    "Please make sure that the directory isn't read-only or the file isn't opened by another program.", e);
+                                    "Please make sure that the directory isn't read-only or that the file isn't opened by another program.", e);
             }
             catch (Exception e)
             {
@@ -403,7 +427,6 @@ namespace ChromiumUpdaterGUI
                         process.Kill();
                 }
             }
-
             else
                 await Task.Delay(500);
             
@@ -412,10 +435,12 @@ namespace ChromiumUpdaterGUI
             await CheckForUpdate();
         }
 
-        private static void IsUpToDate(bool isVisible)
+        private static void IsUpToDate(bool isVisible, bool showUpTodateNotifEnabled)
         {
             const string upToDateText = "Chromium is up-to-date!";
-            if (isVisible)
+            if (!isVisible && showUpTodateNotifEnabled)
+                notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, upToDateText, ToolTipIcon.None);
+            else if (isVisible)
                 MessageBox.Show(upToDateText, Constants.Other.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);     
         }
 
@@ -453,47 +478,41 @@ namespace ChromiumUpdaterGUI
         }
 
         //checkboxes
-        private void cb_Startup_CheckedChanged(object sender, EventArgs e)
+        private void CheckboxChanged()
         {
             UpdateFileAttributes(false);
             UpdateStoredVariables();
             CheckStartupStatus(cb_Startup.Checked);
         }
 
-        private void cb_CheckUpateOnClick_CheckedChanged(object sender, EventArgs e)
-        {
-            UpdateFileAttributes(false);
-            UpdateStoredVariables();
-            UpdateFileAttributes(cb_HideConfig.Checked);
-        }
+        private void cb_Startup_CheckedChanged(object sender, EventArgs e) => CheckboxChanged();
 
-        private void cb_HideConfig_CheckedChanged(object sender, EventArgs e)
-        {
-            UpdateFileAttributes(false);
-            UpdateStoredVariables();
-            UpdateFileAttributes(cb_HideConfig.Checked);
-        }
+        private void cb_CheckUpateOnClick_CheckedChanged(object sender, EventArgs e) => CheckboxChanged();
 
-        private void cb_CheckSelfUpdate_CheckedChanged(object sender, EventArgs e)
-        {
-            UpdateFileAttributes(false);
-            UpdateStoredVariables();
-            UpdateFileAttributes(cb_HideConfig.Checked);
-        }
+        private void cb_HideConfig_CheckedChanged(object sender, EventArgs e) => CheckboxChanged();
+
+        private void cb_CheckSelfUpdate_CheckedChanged(object sender, EventArgs e) => CheckboxChanged();
 
         private void cb_EnableRegularChecks_CheckedChanged(object sender, EventArgs e)
         {
             UpdateFileAttributes(false);
             UpdateStoredVariables();
             comboBox_RegularUpdateInterval.Visible = cb_EnableRegularChecks.Checked;
+            if (cb_EnableRegularChecks.Checked && (int)comboBox_RegularUpdateInterval.SelectedItem <= 0)
+            {
+                SetRegularUpdateInterval(Constants.Other.maxUpdateCheckInterval);
+                UpdateUIFromConfig();
+            }
             CheckForUpdatesRegularly(cb_EnableRegularChecks.Checked);
             UpdateFileAttributes(cb_HideConfig.Checked);
         }
 
+        private void cb_ShowUpToDateNotif_CheckedChanged(object sender, EventArgs e) => CheckboxChanged();
+
         //buttons
         private async void b_CheckUpdate_Click(object sender, EventArgs e) => await CheckForUpdate();
 
-        private void b_Exit_Click(object sender, EventArgs e) => ExitProgram();
+        private void b_Exit_Click(object sender, EventArgs e) => ExitProgram(0);
 
         private void b_DeleteConfig_Click(object sender, EventArgs e)
         {
@@ -510,15 +529,18 @@ namespace ChromiumUpdaterGUI
 
         private void b_CancelDownload_Click(object sender, EventArgs e) => source.Cancel();
 
+        private void b_OpenInstallFolder_Click(object sender, EventArgs e) => Process.Start("explorer", Environment.CurrentDirectory);
+
         //other
         private void comboBox_RegularUpdateInterval_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (!settingUp)
+            if (settingUp == false)
             {
                 UpdateFileAttributes(false);
                 UpdateStoredVariables();
                 UpdateFileAttributes(cb_HideConfig.Checked);
                 CheckForUpdatesRegularly(cb_EnableRegularChecks.Checked);
+                settingUp = null;
             }
         }
 
@@ -552,41 +574,37 @@ namespace ChromiumUpdaterGUI
                 if (!Directory.Exists(Constants.StoredVariables.directory))
                     Directory.CreateDirectory(Constants.StoredVariables.directory);
 
-                client.Dispose();
-                notifyIcon.Dispose();
-                source.Cancel();
-                source.Dispose();
                 File.WriteAllText(errorLogLocation, e.ToString());
-                Environment.Exit(1);
+                ExitProgram(1);
             }
         }
 
-        private static void ExitProgram()
+        private static void ExitProgram(int exitCode)
         {
             notifyIcon.Visible = false;
             notifyIcon.Dispose();
+            client.CancelPendingRequests();
             client.Dispose();
-            source.Cancel();
-            source.Dispose();
-            timer.Dispose();
-            Environment.Exit(0);
+            if (source != null) { source.Cancel(); source.Dispose(); }
+            if (timer != null) timer.Dispose();
+            Environment.Exit(exitCode);
         }
 
         private async static void Secret(bool enabled)
         {
             if (enabled && DateTime.Today.ToString("M") == "28 March")
             {
-                notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle, "Happy birthday to me!", ToolTipIcon.None);
-                await Task.Delay(500);
-                await Task.Run(() => Process.Start(new ProcessStartInfo("cmd", $"/c start " + "https://www.youtube.com/watch?v=dQw4w9WgXcQ".Replace("&", "^&")) { CreateNoWindow = true }));
-                MessageBox.Show("Happy birthday to me!", Constants.Other.appTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                notifyIcon.ShowBalloonTip(Constants.Other.notificationTimeout, Constants.Other.appTitle + "'s creator", "Happy birthday to me!", ToolTipIcon.None);
+                await Task.Delay(1000);
+                await Task.Run(() => Process.Start(new ProcessStartInfo("https://www.youtube.com/watch?v=dQw4w9WgXcQ") { UseShellExecute = true, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Maximized }));
+                MessageBox.Show("Happy birthday to me!", Constants.Other.appTitle + "'s creator", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
     }
 
-    public static class CustomExtensions//copied from stackoverflow (https://stackoverflow.com/questions/20661652/progress-bar-with-httpclient)
+    internal static class CustomExtensions//copied from stackoverflow (https://stackoverflow.com/questions/20661652/progress-bar-with-httpclient)
     {
-        public static async Task DownloadAsync(this HttpClient client, string requestUri, Stream destination, DateTime startTime, IProgress<(float,float,DateTime)> progress = null, System.Threading.CancellationToken cancellationToken = default)
+        internal static async Task DownloadAsync(this HttpClient client, string requestUri, Stream destination, DateTime startTime, IProgress<(float,float,DateTime)> progress = null, System.Threading.CancellationToken cancellationToken = default)
         {
             using HttpResponseMessage response = await client.GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             long? length = response.Content.Headers.ContentLength;
@@ -600,7 +618,7 @@ namespace ChromiumUpdaterGUI
             await download.CopyToAsync(destination, 81920, finalProgress, cancellationToken);
             progress.Report((1,1,startTime));
         }
-        public static async Task CopyToAsync(this Stream source, Stream destination, int bufferSize, IProgress<long> progress = null, System.Threading.CancellationToken cancellationToken = default)
+        internal static async Task CopyToAsync(this Stream source, Stream destination, int bufferSize, IProgress<long> progress = null, System.Threading.CancellationToken cancellationToken = default)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));

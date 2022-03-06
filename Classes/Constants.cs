@@ -17,7 +17,7 @@ namespace ChromiumUpdaterGUI
 
             internal const string chr_InstallerFileName = "mini_installer.sync.exe";
 
-            internal const int maxUpdateCheckInterval = 5;
+            internal const int maxUpdateCheckInterval = 10;
         }
         protected internal struct StoredVariables
         {
