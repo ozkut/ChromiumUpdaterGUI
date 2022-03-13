@@ -29,13 +29,13 @@ namespace ChromiumUpdaterGUI
 
         private void Form_Load(object sender, EventArgs e)
         {
-            InitilizeStuff();
+            InitializeStuff();
             notifyIcon.BalloonTipClicked += ShowWindowClicked;
             notifyIcon.DoubleClick += ShowWindowClicked;
         }
 
         //some methods
-        private async void InitilizeStuff()
+        private async void InitializeStuff()
         {
             Hide();
             settingUp = true;
@@ -71,8 +71,11 @@ namespace ChromiumUpdaterGUI
                 ("Check for self update", null, CheckSelfUpdateClicked),
                 ("Exit", System.Drawing.SystemIcons.Error.ToBitmap(), ExitClicked)
             };
-            foreach ((string, System.Drawing.Image, EventHandler) group in groupList)
-                notifyIcon.ContextMenuStrip.Items.Add(group.Item1, group.Item2, group.Item3);
+            for (int i = 0; i < groupList.Count; i++)
+            {
+                (string, System.Drawing.Image, EventHandler) items = groupList[i];
+                notifyIcon.ContextMenuStrip.Items.Add(items.Item1, items.Item2, items.Item3);
+            }
         }
 
         private void SetRegularUpdateInterval(int maxTime)
@@ -153,8 +156,8 @@ namespace ChromiumUpdaterGUI
         {
             //love you, tuples <3
             int percentage = (int)(values.Item2 / values.Item1 * 100);//%
-            double downloaded = Math.Round(values.Item2 / 1000000);//MB
-            double total = Math.Round(values.Item1 / 1000000);//MB
+            float downloaded = MathF.Round(values.Item2 / 1000000);//MB
+            float total = MathF.Round(values.Item1 / 1000000);//MB
 
             TimeSpan elapsedTime = DateTime.Now - values.Item3;
             double downloadSpeed = downloaded / elapsedTime.TotalSeconds * 1000;//KB/s
@@ -190,12 +193,7 @@ namespace ChromiumUpdaterGUI
 
         private static void ExitClicked(object sender, EventArgs e) => ExitProgram(0);
 
-        private void TimeoutChanged(object sender, EventArgs e) 
-        {
-            UpdateFileAttributes(false);
-            UpdateStoredVariables();
-            UpdateFileAttributes(cb_HideConfig.Checked);
-        }
+        private void TimeoutChanged(object sender, EventArgs e) => CheckboxChanged();
 
         //storedVaribles stuff
         private async void UpdateUIFromConfig()
@@ -423,8 +421,8 @@ namespace ChromiumUpdaterGUI
 
                 if (browserOpenDialog == DialogResult.Yes)
                 {
-                    foreach (Process process in processes)
-                        process.Kill();
+                    for (int i = 0; i < processes.Length; i++)
+                        processes[i].Kill();
                 }
             }
             else

@@ -130,9 +130,10 @@ namespace ChromiumUpdaterGUI
             // 
             // b_DeleteConfig
             // 
-            this.b_DeleteConfig.Location = new System.Drawing.Point(335, 168);
+            this.b_DeleteConfig.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            this.b_DeleteConfig.Location = new System.Drawing.Point(335, 172);
             this.b_DeleteConfig.Name = "b_DeleteConfig";
-            this.b_DeleteConfig.Size = new System.Drawing.Size(95, 25);
+            this.b_DeleteConfig.Size = new System.Drawing.Size(95, 24);
             this.b_DeleteConfig.TabIndex = 8;
             this.b_DeleteConfig.Text = "Delete Config";
             this.b_DeleteConfig.UseVisualStyleBackColor = true;
@@ -269,7 +270,7 @@ namespace ChromiumUpdaterGUI
             // 
             // b_OpenInstallFolder
             // 
-            this.b_OpenInstallFolder.Location = new System.Drawing.Point(197, 168);
+            this.b_OpenInstallFolder.Location = new System.Drawing.Point(197, 172);
             this.b_OpenInstallFolder.Name = "b_OpenInstallFolder";
             this.b_OpenInstallFolder.Size = new System.Drawing.Size(135, 24);
             this.b_OpenInstallFolder.TabIndex = 15;
