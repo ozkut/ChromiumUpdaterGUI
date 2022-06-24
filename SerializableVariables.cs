@@ -1,4 +1,4 @@
-﻿namespace ChromiumUpdaterGUI
+﻿namespace ChromiumUpdater
 {
     internal class SerializeableVariables
     {
@@ -9,6 +9,6 @@
         public int DownloadTimeout { get; set; }
         public bool CheckUpdateRegularly { get; set; }
         public int UpdateCheckInterval { get; set; }
-        public bool ShowNotifWhanUpToDate { get; set; }
+        public bool ShowNotifWhenUpToDate { get; set; }
     }
 }
