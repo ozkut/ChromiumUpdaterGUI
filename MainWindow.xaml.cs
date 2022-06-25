@@ -30,8 +30,6 @@ namespace ChromiumUpdater
         {
             InitializeComponent();
             combobox_RegularUpdateCheckInterval.Visibility = Visibility.Hidden;
-            notifyIcon.Icon = System.Drawing.SystemIcons.Application;
-            notifyIcon.ToolTipText = Constants.Other.appTitle;
             ChangeDownloadUIVisibility(false);
             SetTimeout(Constants.Other.maxHttpClientTimeout);
             SetRegularUpdateInterval(Constants.Other.maxUpdateCheckInterval);
@@ -68,8 +66,8 @@ namespace ChromiumUpdater
         {
             //love you, tuples <3
             short percentage = (short)(values.Item2 / values.Item1 * 100);//%
-            float downloaded = MathF.Round(values.Item2 / 1000000);//MB
-            float total = MathF.Round(values.Item1 / 1000000);//MB
+            float downloaded = values.Item2 / 1000000;//MB
+            float total = values.Item1 / 1000000;//MB
 
             TimeSpan elapsedTime = DateTime.Now - values.Item3;
             double downloadSpeed = Math.Round(downloaded / elapsedTime.TotalSeconds * 1000);//KB/s
@@ -81,7 +79,7 @@ namespace ChromiumUpdater
             taskbarInfo.ProgressValue = percentage / 100.0;
             l_Percentage.Content = $" {percentage}%";
 
-            l_DownloadAmount.Content = $"{downloaded} MB / {total} MB";
+            l_DownloadAmount.Content = $"{downloaded:0.0} MB / {total:0.0} MB";
 
             l_DownloadSpeed.Content = downloadSpeed < 1000 ? $"{downloadSpeed:0} KB/s" : $"{downloadSpeed / 1000:0.0} MB/s";
         }
@@ -163,17 +161,17 @@ namespace ChromiumUpdater
         }
 
         //buttons
-        private protected void ShowWindowClicked(object sender, EventArgs e) => ShowWindow();
+        internal void ShowWindowClicked(object sender, EventArgs e) => ShowWindow();
 
-        private void ExitClicked(object sender, EventArgs e) => Updater.ExitProgram(0);
+        internal void ExitClicked(object sender, EventArgs e) => Updater.ExitProgram(0);
 
-        private void CheckUpdateClicked(object sender, EventArgs e)
+        internal void CheckUpdateClicked(object sender, EventArgs e)
         {
             ShowWindow();
             Updater.CheckAndDownload();
         }
 
-        private void CheckSelfUpdateClicked(object sender, EventArgs e)
+        internal void CheckSelfUpdateClicked(object sender, EventArgs e)
         {
             _ = Process.Start(Constants.Paths.launcherInstallPath);
             Updater.ExitProgram(0);

@@ -14,14 +14,12 @@ namespace ChromiumUpdater
         internal static System.Threading.CancellationTokenSource Source { get; set; }
         private static System.Timers.Timer Timer { get; set; }
         internal static bool? SettingUp { get; set; }
+        internal static System.Windows.Forms.NotifyIcon NotifyIcon { get; set; }
         internal static MainWindow MainWindow { get; set; }//= MainWindow.MainWindowInstance;
 
         internal static string ErrorlogExists(string errorLogPath)
         {
-            if (File.Exists(errorLogPath))
-                return errorLogPath;
-            else
-                return string.Empty;
+            return File.Exists(errorLogPath) ? errorLogPath : string.Empty;
         }
 
         internal static void CheckForRunningInstances(string programName)
@@ -42,13 +40,9 @@ namespace ChromiumUpdater
 
         internal static bool StoredVariablesExists()
         {
-            if (File.Exists(Constants.StoredVariables.configPath))
-                return true;
-            else
-            {
-                _ = Directory.CreateDirectory(Constants.StoredVariables.directory);
-                return false;
-            }
+            bool fileExists = File.Exists(Constants.StoredVariables.configPath);
+            if (!fileExists) _ = Directory.CreateDirectory(Constants.StoredVariables.directory);
+            return fileExists;
         }
 
         internal static void ShowDebugWarning()
@@ -146,7 +140,7 @@ namespace ChromiumUpdater
             UpdateFileAttributes(MainWindow.cb_HideConfig.IsChecked.Value);
         }
 
-        internal static async void InvokeCheckUpdate(object sender, System.Timers.ElapsedEventArgs e) => await ShouldDownloadNewestVersion();
+        private static async void InvokeCheckUpdate(object sender, System.Timers.ElapsedEventArgs e) => await ShouldDownloadNewestVersion();
 
         internal static void CheckForUpdatesRegularly(bool enabled)
         {
@@ -177,8 +171,8 @@ namespace ChromiumUpdater
 
         internal static void ExitProgram(int exitCode)
         {
-            MainWindow.notifyIcon.Visibility = Visibility.Hidden;
-            MainWindow.notifyIcon.Dispose();
+            NotifyIcon.Visible = false;
+            NotifyIcon.Dispose();
             Client.CancelPendingRequests();
             Client.Dispose();
             if (Source != null) { Source.Cancel(); Source.Dispose(); }
@@ -192,7 +186,7 @@ namespace ChromiumUpdater
                 return;
             if (DateTime.Today.ToString("M") == "28 March")
             {
-                MainWindow.notifyIcon.ShowBalloonTip(Constants.Other.appTitle + "'s creator", "Happy birthday to me!", Hardcodet.Wpf.TaskbarNotification.BalloonIcon.None);
+                NotifyIcon.ShowBalloonTip(0, Constants.Other.appTitle + "'s creator", "Happy birthday to me!", System.Windows.Forms.ToolTipIcon.None);
                 await Task.Delay(1000);
                 _ = await Task.Run(() => Process.Start(new ProcessStartInfo("https://www.youtube.com/watch?v=dQw4w9WgXcQ") { UseShellExecute = true, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Maximized }));
                 _ = MessageBox.Show("Happy birthday to me!", Constants.Other.appTitle, MessageBoxButton.OK, MessageBoxImage.Information);
@@ -247,7 +241,7 @@ namespace ChromiumUpdater
             {
                 const string upToDateText = "Chromium is up-to-date!";
                 if (!MainWindow.IsVisible && MainWindow.cb_ShowNotifWhenUpToDate.IsChecked.Value)
-                    MainWindow.notifyIcon.ShowBalloonTip(Constants.Other.appTitle, upToDateText, Hardcodet.Wpf.TaskbarNotification.BalloonIcon.None);
+                    NotifyIcon.ShowBalloonTip(1, Constants.Other.appTitle, upToDateText, System.Windows.Forms.ToolTipIcon.None);
                 else if (MainWindow.IsVisible)
                     _ = MessageBox.Show(upToDateText, Constants.Other.appTitle, MessageBoxButton.OK, MessageBoxImage.Information);
                 MainWindow.b_DownloadWhenUpToDate.IsEnabled = true;
@@ -257,7 +251,7 @@ namespace ChromiumUpdater
             {
                 MainWindow.b_DownloadWhenUpToDate.IsEnabled = false;
                 if (!MainWindow.IsVisible)
-                    MainWindow.notifyIcon.ShowBalloonTip(Constants.Other.appTitle, "An update is available!", Hardcodet.Wpf.TaskbarNotification.BalloonIcon.Info);
+                    NotifyIcon.ShowBalloonTip(1, Constants.Other.appTitle, "An update is available!", System.Windows.Forms.ToolTipIcon.Info);
                 else
                 {
                     MessageBoxResult updateAvailableDialog =
@@ -317,7 +311,7 @@ namespace ChromiumUpdater
                 _ = MessageBox.Show("Install Complete!", Constants.Other.appTitle, MessageBoxButton.OK, MessageBoxImage.Information);
 
             DeleteTempChrInsaller();
-            await ShouldDownloadNewestVersion();
+            _ = await ShouldDownloadNewestVersion();
         }
 
         private static void DeleteTempChrInsaller()
