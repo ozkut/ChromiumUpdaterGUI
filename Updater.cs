@@ -107,36 +107,23 @@ namespace ChromiumUpdater
         internal static async void UpdateUIFromConfig()
         {
             UpdateFileAttributes(false);
-
-            bool startOnBootState, checkUpdateOnClickState, hideConfigState, checkSelfUpdate, checkUpdatesRegularly, showNotifWhenUpToDate;
-            int timeOut, UpdateCheckInterval;
             while (true)
             {
                 try
                 {
                     SerializeableVariables vars = JsonSerializer.Deserialize<SerializeableVariables>(await File.ReadAllTextAsync(Constants.StoredVariables.configPath));
-                    startOnBootState = vars.StartOnBoot;
-                    checkUpdateOnClickState = vars.CheckUpdateOnClick;
-                    hideConfigState = vars.HideConfig;
-                    checkSelfUpdate = vars.CheckForSelfUpdate;
-                    timeOut = vars.DownloadTimeout;
-                    checkUpdatesRegularly = vars.CheckUpdateRegularly;
-                    UpdateCheckInterval = vars.UpdateCheckInterval;
-                    showNotifWhenUpToDate = vars.ShowNotifWhenUpToDate;
+                    MainWindow.cb_StartOnBoot.IsChecked = vars.StartOnBoot;
+                    MainWindow.cb_ChechForUpdatesOnMaximise.IsChecked = vars.CheckUpdateOnClick;
+                    MainWindow.cb_HideConfig.IsChecked = vars.HideConfig;
+                    MainWindow.cb_CheckForSelfUpdate.IsChecked = vars.CheckForSelfUpdate;
+                    MainWindow.combobox_Timeout.SelectedItem = vars.DownloadTimeout;
+                    MainWindow.cb_CheckUpdateRegularly.IsChecked = vars.CheckUpdateRegularly;
+                    MainWindow.combobox_RegularUpdateCheckInterval.SelectedItem = vars.UpdateCheckInterval;
+                    MainWindow.cb_ShowNotifWhenUpToDate.IsChecked = vars.ShowNotifWhenUpToDate;
                     break;
                 }
                 catch { UpdateStoredVariables(); }
             }
-
-            MainWindow.cb_StartOnBoot.IsChecked = startOnBootState;
-            MainWindow.cb_ChechForUpdatesOnMaximise.IsChecked = checkUpdateOnClickState;
-            MainWindow.cb_HideConfig.IsChecked = hideConfigState;
-            MainWindow.cb_CheckForSelfUpdate.IsChecked = checkSelfUpdate;
-            MainWindow.combobox_Timeout.SelectedItem = timeOut;
-            MainWindow.cb_CheckUpdateRegularly.IsChecked = checkUpdatesRegularly;
-            MainWindow.combobox_RegularUpdateCheckInterval.SelectedItem = UpdateCheckInterval;
-            MainWindow.cb_ShowNotifWhenUpToDate.IsChecked = showNotifWhenUpToDate;
-
             UpdateFileAttributes(MainWindow.cb_HideConfig.IsChecked.Value);
         }
 
@@ -148,36 +135,34 @@ namespace ChromiumUpdater
             if (!enabled)
             {
                 MainWindow.cb_CheckUpdateRegularly.Content = "Check for updates regularly";
-                if (Timer != null)
-                {
-                    Timer.Enabled = enabled;
-                    Timer.Stop();
-                    Timer.Dispose();
-                }
+                Timer?.Stop();
+                Timer?.Dispose();
                 return;
             }
-            MainWindow.cb_CheckUpdateRegularly.Content = "Check for updates regularly every                minute(s)";
-            if (Timer != null && Timer.Enabled)
+
+            MainWindow.cb_CheckUpdateRegularly.Content = "Check for updates regularly every                hour(s)";
+            
+            Timer?.Stop();
+            Timer?.Dispose();
+
+            Timer = new()
             {
-                Timer.Stop();
-                Timer.Dispose();
-            }
-            Timer = new();
-            Timer.Enabled = enabled;
-            Timer.Interval = TimeSpan.FromMinutes((int)MainWindow.combobox_RegularUpdateCheckInterval.SelectedItem).TotalMilliseconds;
+                Interval = TimeSpan.FromHours((int)MainWindow.combobox_RegularUpdateCheckInterval.SelectedItem).TotalMilliseconds
+            };
             Timer.Start();
             Timer.Elapsed += InvokeCheckUpdate;
         }
 
-        internal static void ExitProgram(int exitCode)
+        internal static void ExitProgram()
         {
             NotifyIcon.Visible = false;
             NotifyIcon.Dispose();
             Client.CancelPendingRequests();
             Client.Dispose();
-            if (Source != null) { Source.Cancel(); Source.Dispose(); }
-            if (Timer != null) Timer.Dispose();
-            Environment.Exit(exitCode);
+            Source?.Cancel(); 
+            Source?.Dispose();
+            Timer?.Dispose();
+            Environment.Exit(Environment.ExitCode);
         }
 
         internal static async void Secret(bool isEnabled)
@@ -342,7 +327,7 @@ namespace ChromiumUpdater
                 _ = Directory.CreateDirectory(Constants.StoredVariables.directory);
 
             File.WriteAllText(errorLogLocation, e.ToString());
-            ExitProgram(1);
+            ExitProgram();
         }
     }
 }

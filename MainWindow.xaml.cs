@@ -18,13 +18,14 @@ namespace ChromiumUpdater
             {
                 lock (mainWindowPadlock)
                 {
-                    if (tmp_MainWindowInstance == null)
-                        tmp_MainWindowInstance = new();
+                    tmp_MainWindowInstance ??= new();
                     return tmp_MainWindowInstance;
                 }
             }
         }
         ///Singleton
+
+        private TimeSpan previousSecond;
 
         private MainWindow()
         {
@@ -32,22 +33,16 @@ namespace ChromiumUpdater
             combobox_RegularUpdateCheckInterval.Visibility = Visibility.Hidden;
             ChangeDownloadUIVisibility(false);
             SetTimeout(Constants.Other.maxHttpClientTimeout);
-            SetRegularUpdateInterval(Constants.Other.maxUpdateCheckInterval);
+            SetRegularUpdateInterval();
         }
 
         internal void ChangeDownloadUIVisibility(bool show)
         {
-            Visibility visibility;
-            if (taskbarInfo == null) taskbarInfo = new();
-            if (show)
+            taskbarInfo ??= new();
+            Visibility visibility = show ? Visibility.Visible : Visibility.Hidden;
+            taskbarInfo.ProgressState = show ? System.Windows.Shell.TaskbarItemProgressState.Normal : System.Windows.Shell.TaskbarItemProgressState.None;
+            if (!show)
             {
-                visibility = Visibility.Visible;
-                taskbarInfo.ProgressState = System.Windows.Shell.TaskbarItemProgressState.Normal;
-            }
-            else
-            {
-                visibility = Visibility.Hidden;
-                taskbarInfo.ProgressState = System.Windows.Shell.TaskbarItemProgressState.None;
                 taskbarInfo.ProgressValue = 0;
                 Progressbar.Value = 0;
                 Updater.Source = new();
@@ -64,24 +59,22 @@ namespace ChromiumUpdater
 
         internal void UpdateProgress((float, float, DateTime) values)
         {
-            //love you, tuples <3
-            short percentage = (short)(values.Item2 / values.Item1 * 100);//%
+            sbyte percentage = (sbyte)(values.Item2 / values.Item1 * 100);//%
             float downloaded = values.Item2 / 1000000;//MB
             float total = values.Item1 / 1000000;//MB
 
-            TimeSpan elapsedTime = DateTime.Now - values.Item3;
-            double downloadSpeed = Math.Round(downloaded / elapsedTime.TotalSeconds * 1000);//KB/s
-
-            if (Math.Round(elapsedTime.TotalSeconds) % 2 < 1)
-                return;
-
             Progressbar.Value = percentage;
-            taskbarInfo.ProgressValue = percentage / 100.0;
+            taskbarInfo.ProgressValue = percentage / 100f;
             l_Percentage.Content = $" {percentage}%";
-
             l_DownloadAmount.Content = $"{downloaded:0.0} MB / {total:0.0} MB";
 
-            l_DownloadSpeed.Content = downloadSpeed < 1000 ? $"{downloadSpeed:0} KB/s" : $"{downloadSpeed / 1000:0.0} MB/s";
+            TimeSpan elapsedTime = DateTime.Now - values.Item3;
+            if ((elapsedTime - previousSecond) >= TimeSpan.FromSeconds(1))//only update download speed if at least 1 second has passed
+            {
+                uint downloadSpeed = (uint)(downloaded / elapsedTime.TotalSeconds * 1000);//KB/s
+                l_DownloadSpeed.Content = downloadSpeed < 1000 ? $"{downloadSpeed:0} KB/s" : $"{downloadSpeed / 1000:0.0} MB/s";
+                previousSecond = elapsedTime;
+            }
         }
 
         internal void SetDefaultValues()
@@ -91,11 +84,11 @@ namespace ChromiumUpdater
             cb_HideConfig.IsChecked = true;
             cb_CheckForSelfUpdate.IsChecked = true;
             cb_CheckUpdateRegularly.IsChecked = true;
-            combobox_RegularUpdateCheckInterval.SelectedItem = Constants.Other.maxUpdateCheckInterval;
+            combobox_RegularUpdateCheckInterval.SelectedItem = 60;
             cb_ShowNotifWhenUpToDate.IsChecked = true;
             combobox_Timeout.SelectedItem = Constants.Other.maxHttpClientTimeout;
             _ = Process.Start(Constants.Paths.installPath);
-            Environment.Exit(0);
+            Environment.Exit(Environment.ExitCode);
             //Updater.ExitProgram(0);//throws system can't find file error??
         }
 
@@ -106,9 +99,9 @@ namespace ChromiumUpdater
             combobox_Timeout.SelectedItem = timeout;
         }
 
-        private void SetRegularUpdateInterval(int maxTimeout)
+        private void SetRegularUpdateInterval()
         {
-            int[] times = { 5, 10, 30, maxTimeout };
+            int[] times = { 1, 6, 12, 24 };
             for (int i = 0; i < times.Length; i++)
                 combobox_RegularUpdateCheckInterval.Items.Insert(i, times[i]);
             combobox_RegularUpdateCheckInterval.SelectedItem = times[^1];
@@ -148,7 +141,7 @@ namespace ChromiumUpdater
                 //this *may* be useless (or not?)
                 if (combobox_RegularUpdateCheckInterval.SelectedItem == null)
                 {
-                    SetRegularUpdateInterval(Constants.Other.maxUpdateCheckInterval);
+                    SetRegularUpdateInterval();
                     Updater.UpdateUIFromConfig();
                 }
             }
@@ -163,7 +156,7 @@ namespace ChromiumUpdater
         //buttons
         internal void ShowWindowClicked(object sender, EventArgs e) => ShowWindow();
 
-        internal void ExitClicked(object sender, EventArgs e) => Updater.ExitProgram(0);
+        internal void ExitClicked(object sender, EventArgs e) => Updater.ExitProgram();
 
         internal void CheckUpdateClicked(object sender, EventArgs e)
         {
@@ -174,7 +167,7 @@ namespace ChromiumUpdater
         internal void CheckSelfUpdateClicked(object sender, EventArgs e)
         {
             _ = Process.Start(Constants.Paths.launcherInstallPath);
-            Updater.ExitProgram(0);
+            Updater.ExitProgram();
         }
 
         private void b_CheckChromiumUpdates_Clicked(object sender, RoutedEventArgs e) => Updater.CheckAndDownload();
@@ -199,7 +192,7 @@ namespace ChromiumUpdater
         private void b_CheckSelfUpdate_Clicked(object sender, RoutedEventArgs e)
         {
             _ = Process.Start(Constants.Paths.launcherInstallPath);
-            Updater.ExitProgram(0);
+            Updater.ExitProgram();
         }
 
         private void b_DefaultValues_Clicked(object sender, RoutedEventArgs e) => SetDefaultValues();
@@ -247,6 +240,7 @@ namespace ChromiumUpdater
             }
         }
     }
+
     internal static class CustomExtensions
     {
         internal static bool canDownload = true;
