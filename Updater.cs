@@ -40,9 +40,8 @@ namespace ChromiumUpdater
 
         internal static bool StoredVariablesExists()
         {
-            bool fileExists = File.Exists(Constants.StoredVariables.configPath);
-            if (!fileExists) _ = Directory.CreateDirectory(Constants.StoredVariables.directory);
-            return fileExists;
+            _ = Directory.CreateDirectory(Constants.StoredVariables.directory);
+            return File.Exists(Constants.StoredVariables.configPath);
         }
 
         internal static void ShowDebugWarning()
@@ -65,7 +64,7 @@ namespace ChromiumUpdater
         internal static void CheckStartupStatus(bool startOnBoot)
         {
             //inside HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
-            using Microsoft.Win32.RegistryKey regKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+            using Microsoft.Win32.RegistryKey regKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true)!;
             switch (startOnBoot)
             {
                 case true:
@@ -83,14 +82,14 @@ namespace ChromiumUpdater
         {
             SerializeableVariables vars = new()
             {
-                StartOnBoot = MainWindow.cb_StartOnBoot.IsChecked.Value,
-                CheckUpdateOnClick = MainWindow.cb_ChechForUpdatesOnMaximise.IsChecked.Value,
-                HideConfig = MainWindow.cb_HideConfig.IsChecked.Value,
-                CheckForSelfUpdate = MainWindow.cb_CheckForSelfUpdate.IsChecked.Value,
+                StartOnBoot = MainWindow.cb_StartOnBoot.IsChecked!.Value,
+                CheckUpdateOnClick = MainWindow.cb_ChechForUpdatesOnMaximise.IsChecked!.Value,
+                HideConfig = MainWindow.cb_HideConfig.IsChecked!.Value,
+                CheckForSelfUpdate = MainWindow.cb_CheckForSelfUpdate.IsChecked!.Value,
                 DownloadTimeout = (int)MainWindow.combobox_Timeout.SelectedItem,
-                CheckUpdateRegularly = MainWindow.cb_CheckUpdateRegularly.IsChecked.Value,
+                CheckUpdateRegularly = MainWindow.cb_CheckUpdateRegularly.IsChecked!.Value,
                 UpdateCheckInterval = (int)MainWindow.combobox_RegularUpdateCheckInterval.SelectedItem,
-                ShowNotifWhenUpToDate = MainWindow.cb_ShowNotifWhenUpToDate.IsChecked.Value
+                ShowNotifWhenUpToDate = MainWindow.cb_ShowNotifWhenUpToDate.IsChecked!.Value
             };
             await File.WriteAllTextAsync(Constants.StoredVariables.configPath, JsonSerializer.Serialize(vars, new JsonSerializerOptions { WriteIndented = true }));
             UpdateFileAttributes(MainWindow.cb_HideConfig.IsChecked.Value);
@@ -111,7 +110,7 @@ namespace ChromiumUpdater
             {
                 try
                 {
-                    SerializeableVariables vars = JsonSerializer.Deserialize<SerializeableVariables>(await File.ReadAllTextAsync(Constants.StoredVariables.configPath));
+                    SerializeableVariables vars = JsonSerializer.Deserialize<SerializeableVariables>(await File.ReadAllTextAsync(Constants.StoredVariables.configPath))!;
                     MainWindow.cb_StartOnBoot.IsChecked = vars.StartOnBoot;
                     MainWindow.cb_ChechForUpdatesOnMaximise.IsChecked = vars.CheckUpdateOnClick;
                     MainWindow.cb_HideConfig.IsChecked = vars.HideConfig;
@@ -178,6 +177,20 @@ namespace ChromiumUpdater
             }
         }
 
+        private static async Task<string> GetLatestReleaseVersion()
+        {
+            try
+            {
+                System.Collections.Generic.IReadOnlyList<Octokit.Release> releases = await new Octokit.GitHubClient(new Octokit.ProductHeaderValue(Constants.Other.appTitle.Replace(' ', '-'))).Repository.Release.GetAll(Constants.Links.repoOwner, Constants.Links.repoName);
+                return releases[0].TagName.Remove(0, 1);
+            }
+            catch (Octokit.RateLimitExceededException e) 
+            { 
+                DisplayErrorMessage("Too many requests sent!", e, false);
+                return string.Empty;
+            }
+        }
+
         private static async Task<bool> ShouldDownloadNewestVersion()
         {
             string newestVersion = string.Empty, currentVersion = string.Empty;
@@ -185,8 +198,8 @@ namespace ChromiumUpdater
 
             try
             {
-                newestVersion = await Client.GetStringAsync(Constants.Links.VersionLink);
-                currentVersion = FileVersionInfo.GetVersionInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Chromium\Application\chrome.exe")).ProductVersion;
+                newestVersion = await GetLatestReleaseVersion();
+                currentVersion = FileVersionInfo.GetVersionInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Chromium\Application\chrome.exe")).ProductVersion!;
                 hasInternet = true;
             }
             catch (HttpRequestException e)
@@ -220,12 +233,15 @@ namespace ChromiumUpdater
             MainWindow.l_CurrentVersion.Content = Constants.Other.currentVersion + currentVersion;
             MainWindow.l_NewestVersion.Content = Constants.Other.newestVersion + newestVersion;
 
-            if (!hasInternet)
+            if (!hasInternet || newestVersion == string.Empty)
                 return false;
-            if (currentVersion.Equals(newestVersion))//haven't tested this at all
+
+            if (currentVersion[..3] == newestVersion[..3])
             {
-                const string upToDateText = "Chromium is up-to-date!";
-                if (!MainWindow.IsVisible && MainWindow.cb_ShowNotifWhenUpToDate.IsChecked.Value)
+                string upToDateText = "Chromium is up-to-date!";
+                if (currentVersion != newestVersion)
+                    upToDateText = "Minor Chromium update available";
+                if (!MainWindow.IsVisible && MainWindow.cb_ShowNotifWhenUpToDate.IsChecked!.Value)
                     NotifyIcon.ShowBalloonTip(1, Constants.Other.appTitle, upToDateText, System.Windows.Forms.ToolTipIcon.None);
                 else if (MainWindow.IsVisible)
                     _ = MessageBox.Show(upToDateText, Constants.Other.appTitle, MessageBoxButton.OK, MessageBoxImage.Information);
@@ -311,7 +327,7 @@ namespace ChromiumUpdater
                 File.Delete(Constants.Paths.chr_InstallerFileLocation);
         }
 
-        private static void DisplayErrorMessage(string errorMessage, Exception e)
+        private static void DisplayErrorMessage(string errorMessage, Exception e, bool isFatalError = true)
         {
             if (e is HttpRequestException or TaskCanceledException)
             {
@@ -319,7 +335,7 @@ namespace ChromiumUpdater
                 return;
             }
             string errorLogLocation = Path.Combine(Constants.StoredVariables.directory, Constants.Other.errorLogFileName);
-            _ = MessageBox.Show("The program has crashed with the following exception:\n" + errorMessage +
+            _ = MessageBox.Show("The program has encountered an error with the following message:\n" + errorMessage +
                                 $"\nAn error log has been created at: '{errorLogLocation}'",
                                 Constants.Other.appTitle, MessageBoxButton.OK, MessageBoxImage.Error);
 
@@ -327,7 +343,8 @@ namespace ChromiumUpdater
                 _ = Directory.CreateDirectory(Constants.StoredVariables.directory);
 
             File.WriteAllText(errorLogLocation, e.ToString());
-            ExitProgram();
+            if (isFatalError)
+                ExitProgram();
         }
     }
 }

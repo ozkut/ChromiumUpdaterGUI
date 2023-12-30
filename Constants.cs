@@ -32,14 +32,16 @@ namespace ChromiumUpdater
             internal static readonly string installPath = Path.Combine(StoredVariables.directory, Other.appTitle + ".exe");
             internal static readonly string launcherInstallPath = Path.Combine(StoredVariables.directory, "Launcher.exe");
             internal static readonly string tempLauncherInstallPath = Path.Combine(StoredVariables.directory, "LauncherTemp.exe");
-            
+            internal static readonly string tokenPath = Path.Combine(StoredVariables.directory, "token");
+
             internal static readonly string currentPath = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
             internal static readonly string chr_InstallerFileLocation = Path.Combine(Path.GetTempPath(), Other.chr_InstallerFileName);
         }
         protected internal struct Links
         {
             internal const string downloadLink = "https://github.com/Hibbiki/chromium-win64/releases/latest/download/mini_installer.sync.exe";
-            internal const string VersionLink = "https://omahaproxy.appspot.com/win";
+            internal const string repoOwner = "Hibbiki";
+            internal const string repoName = "chromium-win64";
         }
     }
 }

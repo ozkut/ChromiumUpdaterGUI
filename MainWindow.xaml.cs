@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Runtime.InteropServices;
+using System.Security;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -273,8 +275,7 @@ namespace ChromiumUpdater
                 throw new ArgumentOutOfRangeException(nameof(bufferSize));
 
             byte[] buffer = new byte[bufferSize];
-            int totalBytesRead = 0;
-            int bytesRead;
+            int bytesRead, totalBytesRead = 0;
             while ((bytesRead = await source.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken).ConfigureAwait(false)) != 0)
             {
                 if (canDownload)
