@@ -2,8 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
-using System.Runtime.InteropServices;
-using System.Security;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -12,7 +10,7 @@ namespace ChromiumUpdater
     public partial class MainWindow : Window
     {
         ///Singleton
-        private static MainWindow tmp_MainWindowInstance = null;
+        private static MainWindow tmp_MainWindowInstance = null!;
         private static readonly object mainWindowPadlock = new();
         internal static MainWindow MainWindowInstance
         {
@@ -38,6 +36,10 @@ namespace ChromiumUpdater
             SetRegularUpdateInterval();
         }
 
+        /// <summary>
+        /// Shows/Hides the download progress UI elements.
+        /// </summary>
+        /// <param name="show"></param>
         internal void ChangeDownloadUIVisibility(bool show)
         {
             taskbarInfo ??= new();
@@ -59,6 +61,10 @@ namespace ChromiumUpdater
             b_PauseDownload.Visibility = visibility;
         }
 
+        /// <summary>
+        /// Calculates the download progress and updates the UI elements.
+        /// </summary>
+        /// <param name="values"></param>
         internal void UpdateProgress((float, float, DateTime) values)
         {
             sbyte percentage = (sbyte)(values.Item2 / values.Item1 * 100);//%
@@ -79,6 +85,9 @@ namespace ChromiumUpdater
             }
         }
 
+        /// <summary>
+        /// Resets all values to some pre-determined ones.
+        /// </summary>
         internal void SetDefaultValues()
         {
             cb_StartOnBoot.IsChecked = false;
@@ -94,6 +103,10 @@ namespace ChromiumUpdater
             //Updater.ExitProgram(0);//throws system can't find file error??
         }
 
+        /// <summary>
+        /// Initializes the timeout combobox.
+        /// </summary>
+        /// <param name="timeout"></param>
         private void SetTimeout(int timeout)
         {
             for (int i = 0; i < timeout; i++)
@@ -101,22 +114,33 @@ namespace ChromiumUpdater
             combobox_Timeout.SelectedItem = timeout;
         }
 
+        /// <summary>
+        /// Initializes the regular update interval combobox.
+        /// </summary>
         private void SetRegularUpdateInterval()
         {
-            int[] times = { 1, 6, 12, 24 };
+            int[] times = [1, 6, 12, 24];
             for (int i = 0; i < times.Length; i++)
                 combobox_RegularUpdateCheckInterval.Items.Insert(i, times[i]);
             combobox_RegularUpdateCheckInterval.SelectedItem = times[^1];
         }
 
+        /// <summary>
+        /// Shows the main window and checks for updates if the user asked for it.
+        /// </summary>
         private void ShowWindow()
         {
             Show();
             WindowState = WindowState.Normal;
-            if (cb_ChechForUpdatesOnMaximise.IsChecked.Value)
+            if (cb_ChechForUpdatesOnMaximise.IsChecked!.Value)
                 Updater.CheckAndDownload();
         }
 
+        /// <summary>
+        /// Hides the main window instead of exiting the program when the user clicks the close window button.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             Hide();
@@ -125,19 +149,29 @@ namespace ChromiumUpdater
         }
 
         //checkbox
+        /// <summary>
+        /// Updates the checkboxes after initial setup.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void CheckboxChanged(object sender, RoutedEventArgs e)
         {
             if (Updater.SettingUp != true)
             {
                 Updater.UpdateFileAttributes(false);
                 Updater.UpdateStoredVariables();
-                Updater.CheckStartupStatus(cb_StartOnBoot.IsChecked.Value);
+                Updater.CheckStartupStatus(cb_StartOnBoot.IsChecked!.Value);
             }
         }
 
+        /// <summary>
+        /// Does the fancy combobox trick for the regular update combobox.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void cb_CheckForUpdatesRegularly_CheckChanged(object sender, RoutedEventArgs e)
         {
-            if (cb_CheckUpdateRegularly.IsChecked.Value)
+            if (cb_CheckUpdateRegularly.IsChecked!.Value)
             {
                 combobox_RegularUpdateCheckInterval.Visibility = Visibility.Visible;
                 //this *may* be useless (or not?)
@@ -151,8 +185,8 @@ namespace ChromiumUpdater
                 combobox_RegularUpdateCheckInterval.Visibility = Visibility.Hidden;
             Updater.UpdateFileAttributes(false);
             Updater.UpdateStoredVariables();
-            Updater.CheckForUpdatesRegularly(cb_CheckUpdateRegularly.IsChecked.Value);
-            Updater.UpdateFileAttributes(cb_HideConfig.IsChecked.Value);
+            Updater.SetRegularUpdateCheckInterval(cb_CheckUpdateRegularly.IsChecked.Value);
+            Updater.UpdateFileAttributes(cb_HideConfig.IsChecked!.Value);
         }
 
         //buttons
@@ -201,6 +235,11 @@ namespace ChromiumUpdater
 
         private void b_DownloadWhenUpToDate_Clicked(object sender, RoutedEventArgs e) => Updater.CheckAndDownload(true);
 
+        /// <summary>
+        /// Handles the button side of the pausing/resuming of the download in progress.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void b_PauseDownload_Clicked(object sender, RoutedEventArgs e)
         {
             switch (CustomExtensions.canDownload)
@@ -221,32 +260,44 @@ namespace ChromiumUpdater
         private void b_Exit_Clicked(object sender, RoutedEventArgs e) => ExitClicked(sender, e);
 
         //other
-        private void combobox_RegularUpdateCheckInterval_SellectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        private void combobox_RegularUpdateCheckInterval_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             if (Updater.SettingUp != true)
             {
                 Updater.UpdateFileAttributes(false);
                 Updater.UpdateStoredVariables();
-                Updater.UpdateFileAttributes(cb_HideConfig.IsChecked.Value);
-                Updater.CheckForUpdatesRegularly(cb_CheckUpdateRegularly.IsChecked.Value);
+                Updater.UpdateFileAttributes(cb_HideConfig.IsChecked!.Value);
+                Updater.SetRegularUpdateCheckInterval(cb_CheckUpdateRegularly.IsChecked!.Value);
             }
         }
 
-        private void combobox_Timeout_SellectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        private void combobox_Timeout_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         {
             if (Updater.SettingUp != true)
             {
                 Updater.UpdateFileAttributes(false);
                 Updater.UpdateStoredVariables();
-                Updater.UpdateFileAttributes(cb_HideConfig.IsChecked.Value);
+                Updater.UpdateFileAttributes(cb_HideConfig.IsChecked!.Value);
             }
         }
     }
 
+    /// <summary>
+    /// Some custom extension methods I've made.
+    /// </summary>
     internal static class CustomExtensions
     {
         internal static bool canDownload = true;
-        internal static async Task DownloadAsync(this HttpClient client, string requestUri, Stream destination, DateTime startTime, IProgress<(float, float, DateTime)> progress = null, System.Threading.CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Implements the DownloadAsync method of HttpClient with support for my custom Progress property.
+        /// </summary>
+        /// <param name="client"></param>
+        /// <param name="requestUri"></param>
+        /// <param name="destination"></param>
+        /// <param name="startTime"></param>
+        /// <param name="progress"></param>
+        /// <param name="cancellationToken"></param>
+        internal static async Task DownloadAsync(this HttpClient client, string requestUri, Stream destination, DateTime startTime, IProgress<(float, float, DateTime)> progress = null!, System.Threading.CancellationToken cancellationToken = default)
         {
             using HttpResponseMessage response = await client.GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             long? length = response.Content.Headers.ContentLength;
@@ -261,18 +312,27 @@ namespace ChromiumUpdater
             progress.Report((1, 1, startTime));
         }
 
-        internal static async Task CopyToAsync(this Stream source, Stream destination, int bufferSize, IProgress<long> progress = null, System.Threading.CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Implements the CopyToAsync method of Stream with support for pausing the download and a progress property.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="destination"></param>
+        /// <param name="bufferSize"></param>
+        /// <param name="progress"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        internal static async Task CopyToAsync(this Stream source, Stream destination, int bufferSize, IProgress<long> progress = null!, System.Threading.CancellationToken cancellationToken = default)
         {
-            if (source == null)
-                throw new ArgumentNullException(nameof(source));
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(destination);
+            ArgumentOutOfRangeException.ThrowIfNegative(bufferSize);
             if (!source.CanRead)
                 throw new ArgumentException("Has to be readable", nameof(source));
-            if (destination == null)
-                throw new ArgumentNullException(nameof(destination));
             if (!destination.CanWrite)
                 throw new ArgumentException("Has to be writable", nameof(destination));
-            if (bufferSize < 0)
-                throw new ArgumentOutOfRangeException(nameof(bufferSize));
 
             byte[] buffer = new byte[bufferSize];
             int bytesRead, totalBytesRead = 0;

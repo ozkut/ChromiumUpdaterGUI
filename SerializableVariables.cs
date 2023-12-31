@@ -1,6 +1,6 @@
 ﻿namespace ChromiumUpdater
 {
-    internal class SerializeableVariables
+    internal class SerializableVariables
     {
         public bool StartOnBoot { get; set; }
         public bool CheckUpdateOnClick { get; set; }
