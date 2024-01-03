@@ -43,7 +43,6 @@ namespace ChromiumUpdater
         internal void ChangeDownloadUIVisibility(bool show)
         {
             taskbarInfo ??= new();
-            Visibility visibility = show ? Visibility.Visible : Visibility.Hidden;
             taskbarInfo.ProgressState = show ? System.Windows.Shell.TaskbarItemProgressState.Normal : System.Windows.Shell.TaskbarItemProgressState.None;
             if (!show)
             {
@@ -52,13 +51,7 @@ namespace ChromiumUpdater
                 Updater.Source = new();
                 CustomExtensions.canDownload = true;
             }
-            l_Percentage.Visibility = visibility;
-            Progressbar.Visibility = visibility;
-            l_DownloadAmount.Visibility = visibility;
-            b_CancelDownload.Visibility = visibility;
-            l_DownloadSpeed.Visibility = visibility;
-            l_DownloadState.Visibility = visibility;
-            b_PauseDownload.Visibility = visibility;
+            l_Percentage.Visibility =  Progressbar.Visibility =  l_DownloadAmount.Visibility = b_CancelDownload.Visibility = l_DownloadSpeed.Visibility = l_DownloadState.Visibility = b_PauseDownload.Visibility = show ? Visibility.Visible : Visibility.Hidden;
         }
 
         /// <summary>
@@ -71,17 +64,22 @@ namespace ChromiumUpdater
             float downloaded = values.Item2 / 1000000;//MB
             float total = values.Item1 / 1000000;//MB
 
+            string progress = $"{downloaded:0.0} MB / {total:0.0} MB";
+            float progressflt = percentage / 100f;
+
             Progressbar.Value = percentage;
-            taskbarInfo.ProgressValue = percentage / 100f;
+            taskbarInfo.ProgressValue = progressflt;
             l_Percentage.Content = $" {percentage}%";
-            l_DownloadAmount.Content = $"{downloaded:0.0} MB / {total:0.0} MB";
+            l_DownloadAmount.Content = progress;
 
             TimeSpan elapsedTime = DateTime.Now - values.Item3;
             if ((elapsedTime - previousSecond) >= TimeSpan.FromSeconds(1))//only update download speed if at least 1 second has passed
             {
                 uint downloadSpeed = (uint)(downloaded / elapsedTime.TotalSeconds * 1000);//KB/s
-                l_DownloadSpeed.Content = downloadSpeed < 1000 ? $"{downloadSpeed:0} KB/s" : $"{downloadSpeed / 1000:0.0} MB/s";
+                string downloadSpeedStr = downloadSpeed < 1000 ? $"{downloadSpeed:0} KB/s" : $"{downloadSpeed / 1000:0.0} MB/s";
+                l_DownloadSpeed.Content = downloadSpeedStr;
                 previousSecond = elapsedTime;
+                Updater.UpdateToastProgress(taskbarInfo.ProgressValue.ToString(), $"Progress: {progress}", $"Speed: {downloadSpeedStr}");
             }
         }
 

@@ -1,16 +1,39 @@
 ﻿using System;
 using System.Windows;
+using Microsoft.Toolkit.Uwp.Notifications;
 
 namespace ChromiumUpdater
 {
     public partial class App : Application
     {
+#pragma warning disable CS8618
         private static MainWindow mainWindow;
+#pragma warning restore CS8618
 
         private App()
         {
             Updater.SettingUp = true;
             Updater.Client = new();
+            ToastNotificationManagerCompat.OnActivated += toastArgs =>
+            {
+                //ToastArguments args = ToastArguments.Parse(toastArgs.Argument);
+                //Windows.Foundation.Collections.ValueSet userInput = toastArgs.UserInput;
+                Current.Dispatcher.Invoke(delegate
+                {
+                    switch (toastArgs.Argument[7..])
+                    {
+                        case "notificationClicked":
+                            mainWindow.ShowWindowClicked(null!, null!);
+                            break;
+                        case "update":
+                            Updater.CheckAndDownload(true);
+                            break;
+                        case "cancel":
+                            Updater.Source.Cancel();
+                            break;
+                    }
+                });
+            };
             Updater.NotifyIcon = new() 
             { 
                 Visible = true,
@@ -20,7 +43,6 @@ namespace ChromiumUpdater
             };
             mainWindow = Updater.MainWindow = ChromiumUpdater.MainWindow.MainWindowInstance;
             Dispatcher.Invoke(Init);
-            Updater.NotifyIcon.BalloonTipClicked += mainWindow.ShowWindowClicked!;
             Updater.NotifyIcon.DoubleClick += mainWindow.ShowWindowClicked!;
         }
 
@@ -47,18 +69,15 @@ namespace ChromiumUpdater
         /// </summary>
         private static void AddContextItems()
         {
-            System.Collections.Generic.List<(string, System.Drawing.Image, EventHandler)> groupList =
+            (string, System.Drawing.Image, EventHandler)[] groupList =
             [
                 ("Show main window", null, mainWindow.ShowWindowClicked!)!,
                 ("Check for Chromium updates", null, mainWindow.CheckUpdateClicked!)!,
                 ("Check for self update", null, mainWindow.CheckSelfUpdateClicked!)!,
                 ("Exit", System.Drawing.SystemIcons.Error.ToBitmap(), mainWindow.ExitClicked!)
             ];
-            for (int i = 0; i < groupList.Count; i++)
-            {
-                (string, System.Drawing.Image, EventHandler) items = groupList[i];
-                _ = Updater.NotifyIcon.ContextMenuStrip!.Items.Add(items.Item1, items.Item2, items.Item3);
-            }
+            for (int i = 0; i < groupList.Length; i++)
+                _ = Updater.NotifyIcon.ContextMenuStrip!.Items.Add(groupList[i].Item1, groupList[i].Item2, groupList[i].Item3);
         }
 
         /// <summary>
@@ -81,7 +100,7 @@ namespace ChromiumUpdater
         /// <param name="errorLogPath"></param>
         private static void CheckErrorLog(string errorLogPath)
         {
-            if (Updater.ErrorlogPath(errorLogPath) == string.Empty)
+            if (Updater.ErrorLogPath(errorLogPath) == string.Empty)
                 return;
             MessageBoxResult openResult = MessageBox.Show("An error log from a previous crash has been found.\n" +
                                                           "Would you like to open it?",

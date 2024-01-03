@@ -5,26 +5,96 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using Windows.UI.Notifications;
+using Microsoft.Toolkit.Uwp.Notifications;
 
 namespace ChromiumUpdater
 {
     internal static class Updater
     {
+#pragma warning disable CS8618
         internal static HttpClient Client { get; set; }
         internal static System.Threading.CancellationTokenSource Source { get; set; }
         private static System.Timers.Timer Timer { get; set; }
         internal static bool? SettingUp { get; set; }
         internal static System.Windows.Forms.NotifyIcon NotifyIcon { get; set; }
         internal static MainWindow MainWindow { get; set; }
+#pragma warning restore CS8618
 
-        private static JsonSerializerOptions jsonOptions = new() { WriteIndented = true };
+        private readonly static JsonSerializerOptions jsonOptions = new() { WriteIndented = true };
+        private readonly static Octokit.GitHubClient githubClient = new(new Octokit.ProductHeaderValue(Constants.Other.appTitle.Replace(' ', '-')));
+
+        /// <summary>
+        /// Displays a toast notification. (Requires Windows 10 or higher I think)
+        /// </summary>
+        /// <param name="title"></param>
+        /// <param name="content"></param>
+        /// <param name="buttons"></param>
+        internal static void ShowNotification(string title, string content, string[]? buttons = null)
+        {
+            ToastContentBuilder notification =  new ToastContentBuilder()
+            .AddArgument("action", "notificationClicked")
+            .AddText(title)
+            .AddText(content)
+            .AddAttributionText($"Data from github.com/{Constants.Other.repoOwner}/{Constants.Other.repoName}");
+            if (buttons != null)
+            {
+                for (int i = 0; i < buttons.Length; i++)
+                {
+                    if (buttons[i] == null)
+                        continue;
+                    notification.AddButton(new ToastButton()
+                                           .SetContent(buttons[i])
+                                           .AddArgument("action", buttons[i].ToLower())
+                                           .SetBackgroundActivation());
+                }
+            }
+            notification.Show();
+        }
+
+        /// <summary>
+        /// Initializes the new toast notification progress bar.
+        /// </summary>
+        private static void InitializeProgressToast()
+        {
+            new ToastContentBuilder()
+                .AddText("Downloading update")
+                .AddVisualChild(new AdaptiveProgressBar()
+                {
+                    Value = new BindableProgressBarValue("progress"),
+                    Title = new BindableString("title"),
+                    Status = new BindableString("status")
+                })
+                .AddButton(new ToastButton()
+                                    .SetContent("Cancel")
+                                    .AddArgument("action", "cancel")
+                                    .SetBackgroundActivation())
+#pragma warning disable CA1416
+                .Show(toast => { toast.Tag = toast.Group = Constants.Other.appTitle; });
+        }
+
+        /// <summary>
+        /// Updates the progress bar on the toast notification.
+        /// </summary>
+        /// <param name="progress"></param>
+        /// <param name="title"></param>
+        /// <param name="status"></param>
+        internal static void UpdateToastProgress(string progress, string title, string status)
+        {
+            NotificationData data = new() { SequenceNumber = 0 };
+            data.Values["progress"] = progress;
+            data.Values["title"] = title;
+            data.Values["status"] = status;
+#pragma warning restore CA1416
+            ToastNotificationManagerCompat.CreateToastNotifier().Update(data, Constants.Other.appTitle, Constants.Other.appTitle);
+        }
 
         /// <summary></summary>
         /// <param name="errorLogPath"></param>
         /// <returns>
         /// The path of the error log if it exists, if not, returns string.Empty.
         /// </returns>
-        internal static string ErrorlogPath(string errorLogPath)
+        internal static string ErrorLogPath(string errorLogPath)
         {
             return File.Exists(errorLogPath) ? errorLogPath : string.Empty;
         }
@@ -79,7 +149,7 @@ namespace ChromiumUpdater
         /// <param name="ignoreCheck"></param>
         internal static async void CheckAndDownload(bool ignoreCheck = false)
         {
-            if (await ShouldDownloadNewestVersion() || ignoreCheck)
+            if (ignoreCheck || await ShouldDownloadNewestVersion())
                 await DownloadNewestVersion();
         }
 
@@ -199,8 +269,8 @@ namespace ChromiumUpdater
         {
             try
             {
-                System.Collections.Generic.IReadOnlyList<Octokit.Release> releases = await new Octokit.GitHubClient(new Octokit.ProductHeaderValue(Constants.Other.appTitle.Replace(' ', '-'))).Repository.Release.GetAll(Constants.Other.repoOwner, Constants.Other.repoName);
-                return releases[0].TagName.Remove(0, 1);
+                Octokit.Release release = await githubClient.Repository.Release.GetLatest(Constants.Other.repoOwner, Constants.Other.repoName);
+                return release.TagName.TrimStart('v').Split("-")[0];
             }
             catch (Octokit.RateLimitExceededException e) 
             { 
@@ -259,13 +329,14 @@ namespace ChromiumUpdater
 
             if (currentVersion[..3] == newestVersion[..3])
             {
-                string upToDateText = "Chromium is up-to-date!";
-                if (currentVersion != newestVersion)
-                    upToDateText = "Minor Chromium update available";
+                bool minorUpdateAvailable = currentVersion != newestVersion;
+                string upToDateText = minorUpdateAvailable ? "Minor Chromium update available" : "Chromium is up-to-date!";
+
                 if (!MainWindow.IsVisible && MainWindow.cb_ShowNotifWhenUpToDate.IsChecked!.Value)
-                    NotifyIcon.ShowBalloonTip(1, Constants.Other.appTitle, upToDateText, System.Windows.Forms.ToolTipIcon.None);
+                    ShowNotification(upToDateText, minorUpdateAvailable ? $"Current Version: {currentVersion}\nNewest version: {newestVersion}" : string.Empty, upToDateText.Length > 24 ? ["Update", "Dismiss"] : null);
                 else if (MainWindow.IsVisible)
                     _ = MessageBox.Show(upToDateText, Constants.Other.appTitle, MessageBoxButton.OK, MessageBoxImage.Information);
+                
                 MainWindow.b_DownloadWhenUpToDate.IsEnabled = true;
                 return false;
             }
@@ -274,7 +345,7 @@ namespace ChromiumUpdater
             {
                 MainWindow.b_DownloadWhenUpToDate.IsEnabled = false;
                 if (!MainWindow.IsVisible)
-                    NotifyIcon.ShowBalloonTip(1, Constants.Other.appTitle, "An update is available!", System.Windows.Forms.ToolTipIcon.Info);
+                    ShowNotification("Update available", $"Current Version: {currentVersion}\nNewest version: {newestVersion}", ["Update", "Dismiss"]);
                 else
                 {
                     MessageBoxResult updateAvailableDialog =
@@ -297,16 +368,18 @@ namespace ChromiumUpdater
         /// </summary>
         private static async Task DownloadNewestVersion()
         {
+            File.Delete(Constants.Paths.chr_InstallerFileLocation);
             Source = new();
             string trimmedFileLocation = Constants.Paths.chr_InstallerFileLocation.Trim(Constants.Other.chr_InstallerFileName.ToCharArray());
             Progress<(float, float, DateTime)> progress = new(MainWindow.UpdateProgress);
+            InitializeProgressToast();
 
             MainWindow.ChangeDownloadUIVisibility(true);
 
             try
             {
                 using FileStream file = new(Constants.Paths.chr_InstallerFileLocation, FileMode.Create, FileAccess.Write, FileShare.None);
-                await Client.DownloadAsync(Constants.Links.downloadLink, file, DateTime.Now, progress, Source.Token);
+                await Client.DownloadAsync(Constants.Other.downloadLink, file, DateTime.Now, progress, Source.Token);
                 file.Close();
             }
             catch (HttpRequestException e)
@@ -393,6 +466,8 @@ namespace ChromiumUpdater
             Source?.Cancel(); 
             Source?.Dispose();
             Timer?.Dispose();
+            ToastNotificationManagerCompat.History.Clear();
+            ToastNotificationManagerCompat.Uninstall();
             Environment.Exit(Environment.ExitCode);
         }
 
@@ -406,7 +481,7 @@ namespace ChromiumUpdater
                 return;
             if (DateTime.Today.ToString("M") == "28 March")
             {
-                NotifyIcon.ShowBalloonTip(0, Constants.Other.appTitle + "'s creator", "Happy birthday to me!", System.Windows.Forms.ToolTipIcon.None);
+                ShowNotification(Constants.Other.appTitle + "'s creator", "Happy birthday to me!", ["Happy birthday!"]);
                 await Task.Delay(1000);
                 _ = await Task.Run(() => Process.Start(new ProcessStartInfo("https://www.youtube.com/watch?v=dQw4w9WgXcQ") { UseShellExecute = true, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Maximized }));
                 _ = MessageBox.Show("Happy birthday to me!", Constants.Other.appTitle, MessageBoxButton.OK, MessageBoxImage.Information);
